@@ -1,6 +1,6 @@
 // src/app/results/[sessionId]/page.tsx
 import React from 'react'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { ResultsDisplay } from '@/components/assessment/ResultsDisplay'
 import { redirect } from 'next/navigation'
 
@@ -11,7 +11,7 @@ interface ResultsPageProps {
 }
 
 export default async function ResultsPage({ params }: ResultsPageProps) {
-  const supabase = createServerClient()
+  const supabase = await createClient()
   
   // Check authentication
   const { data: { user } } = await supabase.auth.getUser()

@@ -1,7 +1,7 @@
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Avatar } from '@/components/ui/Avatar'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { redirect } from 'next/navigation'
 
@@ -49,11 +49,15 @@ export default async function ProfilePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-4">
-                <Avatar 
-                  src={profile?.avatar_url} 
-                  alt={profile?.full_name || user.email || 'User'} 
-                  size="large"
-                />
+                <Avatar className="h-16 w-16">
+                  <AvatarImage 
+                    src={profile?.avatar_url} 
+                    alt={profile?.full_name || user.email || 'User'} 
+                  />
+                  <AvatarFallback>
+                    {(profile?.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
                   <h3 className="font-semibold text-lg">
                     {profile?.full_name || 'No name set'}

@@ -1,6 +1,6 @@
 // src/app/assessment/[sessionId]/page.tsx
 import React from 'react'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { AssessmentFlow } from '@/components/assessment/AssessmentFlow'
 import { redirect } from 'next/navigation'
 
@@ -11,7 +11,7 @@ interface AssessmentPageProps {
 }
 
 export default async function AssessmentPage({ params }: AssessmentPageProps) {
-  const supabase = createServerClient()
+  const supabase = await createClient()
   
   // Check authentication
   const { data: { user } } = await supabase.auth.getUser()

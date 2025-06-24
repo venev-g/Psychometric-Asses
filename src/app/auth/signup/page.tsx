@@ -58,8 +58,8 @@ export default function SignupPage() {
               <p className="text-gray-600 mb-4">
                 We've sent you a confirmation link at {email}
               </p>
-              <Button asChild>
-                <Link href="/auth/login">Return to Login</Link>
+              <Button onClick={() => router.push('/auth/login')}>
+                Return to Login
               </Button>
             </CardContent>
           </Card>

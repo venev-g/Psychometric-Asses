@@ -1,4 +1,5 @@
 // src/components/ui/Skeleton.tsx
+'use client'
 import React from 'react'
 import { cn } from '@/lib/utils'
 

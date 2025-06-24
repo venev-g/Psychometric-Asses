@@ -1,4 +1,5 @@
 // src/components/ui/Avatar.tsx
+'use client'
 import * as React from 'react'
 import * as AvatarPrimitive from '@radix-ui/react-avatar'
 import { cn } from '@/lib/utils'
@@ -137,7 +138,7 @@ const EnhancedAvatar = React.forwardRef<
           className={cn(
             'absolute bottom-0 right-0 block rounded-full ring-2 ring-background',
             getStatusColor(status),
-            getStatusSize(size)
+            getStatusSize(size ?? undefined)
           )}
           aria-label={`Status: ${status}`}
         />
