@@ -104,17 +104,6 @@ export class ScoreCalculator {
       case 'multiselect':
         return Array.isArray(value) ? value.length : 0
       
-      case 'ranking':
-        // For ranking, higher positions get higher scores
-        if (Array.isArray(value)) {
-          const totalItems = question.options?.length || value.length
-          return totalItems - value.indexOf(response.questionId) + 1
-        }
-        return 0
-      
-      case 'slider':
-        return typeof value === 'number' ? value / 100 : 0
-      
       default:
         return 0
     }
@@ -245,12 +234,6 @@ export class ScoreCalculator {
       
       case 'multiselect':
         return question.options?.length || 1
-      
-      case 'ranking':
-        return question.options?.length || 1
-      
-      case 'slider':
-        return 1 // Slider is normalized to 0-1 range
       
       default:
         return 1
