@@ -1,6 +1,8 @@
+'use client'
+
 // src/lib/hooks/useAuth.ts
-import { useState, useEffect, useContext, createContext, ReactNode } from 'react'
-import { User, Session } from '@supabase/auth-helpers-nextjs'
+import React, { useState, useEffect, useContext, createContext, ReactNode } from 'react'
+import { Session } from '@supabase/auth-helpers-nextjs'
 import { AuthService, type AuthUser } from '@/lib/auth-helpers'
 import { useRouter } from 'next/navigation'
 
@@ -135,7 +137,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     refreshSession
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return React.createElement(AuthContext.Provider, { value }, children)
 }
 
 export function useAuth() {
@@ -153,7 +155,7 @@ export function useRequireAuth() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/auth/signin')
+      router.push('/auth/login') // Changed from signin to login to match your routes
     }
   }, [isAuthenticated, isLoading, router])
 

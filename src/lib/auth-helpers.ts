@@ -6,10 +6,14 @@ import type { Database } from '@/types/database.types'
 export const supabase = createClientComponentClient<Database>()
 
 export interface AuthUser extends User {
-  user_metadata?: {
+  user_metadata: {
     full_name?: string
     avatar_url?: string
-  }
+    role?: string
+  } & Record<string, any>
+  app_metadata: {
+    role?: string
+  } & Record<string, any>
 }
 
 export interface SignInCredentials {
