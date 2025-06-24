@@ -9,16 +9,8 @@ const nextConfig = {
       'avatars.githubusercontent.com',
       'lh3.googleusercontent.com'
     ]
-  },
-  async redirects() {
-    return [
-      {
-        source: '/',
-        destination: '/dashboard',
-        permanent: false,
-      },
-    ]
   }
+  // Removed redirects to allow homepage to display
 }
 
 module.exports = nextConfig
