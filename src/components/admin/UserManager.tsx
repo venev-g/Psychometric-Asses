@@ -70,11 +70,13 @@ export function UserManager() {
       header: 'User',
       render: (_: any, row: any) => (
         <div className="flex items-center space-x-3">
-          <Avatar 
-            src={row.avatar_url} 
-            alt={row.full_name || row.email}
-            size="small"
-          />
+          <Avatar className="size-sm">
+            <img 
+              src={row.avatar_url} 
+              alt={row.full_name || row.email} 
+              className="h-full w-full object-cover"
+            />
+          </Avatar>
           <div>
             <div className="font-medium">{row.full_name || 'No name'}</div>
             <div className="text-sm text-gray-500">{row.email}</div>

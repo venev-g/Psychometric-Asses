@@ -1,13 +1,13 @@
 // src/app/page.tsx
 import React from 'react'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 export default async function HomePage() {
-  const supabase = createServerClient()
+  const supabase = await createClient()
   
   // Check if user is already authenticated
   const { data: { user } } = await supabase.auth.getUser()
@@ -28,12 +28,12 @@ export default async function HomePage() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Button asChild variant="ghost">
-                <Link href="/auth/login">Sign In</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/auth/signup">Get Started</Link>
-              </Button>
+              <Link href="/auth/login">
+                <Button variant="ghost">Sign In</Button>
+              </Link>
+              <Link href="/auth/signup">
+                <Button>Get Started</Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -51,9 +51,9 @@ export default async function HomePage() {
             personality traits, and learning preferences.
           </p>
           <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
-            <Button asChild size="lg" className="w-full sm:w-auto">
-              <Link href="/auth/signup">Start Your Assessment</Link>
-            </Button>
+            <Link href="/auth/signup">
+              <Button size="lg" className="w-full sm:w-auto">Start Your Assessment</Button>
+            </Link>
           </div>
         </div>
 

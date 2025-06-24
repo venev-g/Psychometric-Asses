@@ -148,7 +148,7 @@ export function QuestionManager() {
             <div className="w-64">
               <Select
                 value={selectedTestType}
-                onChange={(e) => setSelectedTestType(e.target.value)}
+                onValueChange={(value) => setSelectedTestType(value)}
               >
                 <option value="">All Test Types</option>
                 {testTypes.map((type: any) => (

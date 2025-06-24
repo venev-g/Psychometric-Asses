@@ -166,7 +166,7 @@ function CreateConfigurationForm({ testTypes, onClose, onSuccess }: any) {
     name: '',
     description: '',
     maxAttempts: 1,
-    timeLimitMinutes: null,
+    timeLimitMinutes: null as number | null,
     selectedTests: [] as string[]
   })
   const [submitting, setSubmitting] = useState(false)

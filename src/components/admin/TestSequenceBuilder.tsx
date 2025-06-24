@@ -119,7 +119,7 @@ export function TestSequenceBuilder({ testTypes, sequences, onChange }: TestSequ
                             <div className="flex-1">
                               <Select
                                 value={sequence.testTypeId}
-                                onChange={(e) => updateSequence(index, 'testTypeId', e.target.value)}
+                                onValueChange={(value) => updateSequence(index, 'testTypeId', value)}
                                 required
                               >
                                 <option value="">Select a test type...</option>
