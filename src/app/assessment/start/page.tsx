@@ -13,7 +13,7 @@ export default async function StartAssessmentPage() {
   }
 
   // Get available configurations
-  const { data: configurations } = await supabase
+  const { data: dbConfigurations } = await supabase
     .from('test_configurations')
     .select(`
       *,
@@ -24,6 +24,26 @@ export default async function StartAssessmentPage() {
     `)
     .eq('is_active', true)
     .order('name')
+
+  // Transform database data to match TestConfiguration interface
+  const configurations = dbConfigurations?.map(config => ({
+    id: config.id,
+    name: config.name,
+    description: config.description || '',
+    isActive: config.is_active ?? false,
+    maxAttempts: config.max_attempts ?? 1,
+    timeLimitMinutes: config.time_limit_minutes ?? 0,
+    testSequences: (config.test_sequences || []).map(sequence => ({
+      testTypes: {
+        name: sequence.test_types?.name || '',
+        description: sequence.test_types?.description || '',
+        estimatedDurationMinutes: sequence.test_types?.estimated_duration_minutes || 0
+      }
+    })),
+    createdAt: config.created_at || new Date().toISOString(),
+    updatedAt: config.updated_at || new Date().toISOString(),
+    createdBy: config.created_by || ''
+  })) || []
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -36,7 +56,7 @@ export default async function StartAssessmentPage() {
             Choose an assessment configuration to begin your psychometric evaluation
           </p>
         </div>
-        <TestInstructions configurations={configurations || []} />
+        <TestInstructions configurations={configurations} />
       </div>
     </div>
   )
