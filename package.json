@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:generate": "supabase gen types typescript --project-id sayftcijqhnpzlznvqcz > src/types/database.types.ts",
+    "db:generate": "npx supabase gen types typescript --project-id sayftcijqhnpzlznvqcz > src/types/database.types.ts",
     "test": "jest",
     "test:watch": "jest --watch"
   },
@@ -32,6 +32,7 @@
     "react": "^19",
     "react-dom": "^19",
     "react-hook-form": "^7.58.1",
+    "supabase": "^2.26.9",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.25.67"
