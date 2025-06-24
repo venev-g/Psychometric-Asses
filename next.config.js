@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ['@supabase/ssr']
+    // Remove serverComponentsExternalPackages
   },
+  serverExternalPackages: ['@supabase/ssr'], // Add this instead
   images: {
     domains: [
       'avatars.githubusercontent.com',
