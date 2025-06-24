@@ -13,8 +13,8 @@ interface DashboardOverviewProps {
 }
 
 export function DashboardOverview({ user }: DashboardOverviewProps) {
-  const [sessions, setSessions] = useState([])
-  const [configurations, setConfigurations] = useState([])
+  const [sessions, setSessions] = useState<any[]>([])
+  const [configurations, setConfigurations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -146,7 +146,7 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
                           Started: {new Date(session.started_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <Button asChild size="sm">
+                      <Button size="sm" variant="default" asChild>
                         <Link href={`/assessment/${session.id}`}>
                           Continue
                         </Link>
@@ -231,7 +231,7 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
                           Completed: {new Date(session.completed_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <Button asChild variant="outline" size="sm">
+                      <Button variant="outline" size="sm" asChild>
                         <Link href={`/results/${session.id}`}>
                           View Results
                         </Link>
@@ -242,7 +242,7 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
               </div>
               {completedSessions.length > 5 && (
                 <div className="mt-4 text-center">
-                  <Button asChild variant="outline">
+                  <Button variant="outline" asChild>
                     <Link href="/history">View All Results</Link>
                   </Button>
                 </div>

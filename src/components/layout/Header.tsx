@@ -58,11 +58,19 @@ export function Header() {
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100"
                 >
-                  <Avatar 
-                    src={user.user_metadata?.avatar_url} 
-                    alt={user.user_metadata?.full_name || user.email || 'User'}
-                    size="small"
-                  />
+                  <Avatar size="sm">
+                    {user.user_metadata?.avatar_url ? (
+                      <img 
+                        src={user.user_metadata.avatar_url} 
+                        alt={user.user_metadata?.full_name || user.email || 'User'}
+                        className="h-full w-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center bg-gray-200 rounded-full">
+                        {(user.user_metadata?.full_name || user.email || 'User').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </Avatar>
                   <span className="hidden md:block text-sm font-medium text-gray-700">
                     {user.user_metadata?.full_name || user.email}
                   </span>
