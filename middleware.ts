@@ -1,6 +1,6 @@
-import { createMiddleware } from '@/lib/supabase/middleware'
+import { middleware } from '@/lib/supabase/middleware'
 
-export const middleware = createMiddleware
+export { middleware }
 
 export const config = {
   matcher: [
