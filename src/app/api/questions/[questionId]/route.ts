@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { questionSchema } from '@/lib/validations/assessment'
+import { questionResponseSchema } from '@/lib/validations/assessment'
 
 interface RouteParams {
   params: {
@@ -41,7 +41,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
 
     // Validate input
-    const validatedData = questionSchema.partial().parse(body)
+    const validatedData = questionResponseSchema.partial().parse(body)
 
     const { data: question, error } = await supabase
       .from('questions')

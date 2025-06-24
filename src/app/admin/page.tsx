@@ -1,11 +1,11 @@
 // src/app/admin/page.tsx
 import React from 'react'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { ConfigurationManager } from '@/components/admin/ConfigurationManager'
 import { redirect } from 'next/navigation'
 
 export default async function AdminPage() {
-  const supabase = createServerClient()
+  const supabase = await createClient()
   
   // Check authentication
   const { data: { user } } = await supabase.auth.getUser()

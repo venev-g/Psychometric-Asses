@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { questionSchema } from '@/lib/validations/assessment'
+import { questionResponseSchema } from '@/lib/validations/assessment'
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Validate input
-    const validatedData = questionSchema.parse(body)
+    const validatedData = questionResponseSchema.parse(body)
 
     const { data: question, error } = await supabase
       .from('questions')

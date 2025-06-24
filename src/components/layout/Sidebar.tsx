@@ -15,7 +15,13 @@ import {
   X
 } from 'lucide-react'
 
+/* interface SidebarProps {
+  variant?: 'admin' | string;
+}
+*/
+
 interface SidebarProps {
+  variant?: 'admin' | string
   isOpen?: boolean
   onToggle?: () => void
   className?: string
