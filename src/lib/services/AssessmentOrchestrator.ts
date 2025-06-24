@@ -205,7 +205,30 @@ export class AssessmentOrchestrator {
     
     // Process with appropriate assessment
     const assessment = AssessmentFactory.create(testType.slug)
-    const result = await assessment.processAssessment(responses, questions)
+    // Map the database response to match UserResponse interface
+    const mappedResponses = responses.map(r => ({
+      sessionId: r.session_id,
+      questionId: r.question_id,
+      responseValue: r.response_value,
+      responseTimeMs: r.response_time_ms ?? undefined,
+      createdAt: new Date(r.created_at),
+      id: r.id
+    }));
+    // Map the database questions to match Question interface
+    const mappedQuestions = questions.map(q => ({
+      id: q.id,
+      testTypeId: q.test_type_id,
+      questionText: q.question_text,
+      questionType: q.question_type,
+      options: q.options,
+      category: q.category || undefined,
+      subcategory: q.subcategory || undefined,
+      weight: q.weight,
+      isActive: q.is_active,
+      orderIndex: q.order_index || undefined,
+      createdAt: new Date(q.created_at)
+    }));
+    const result = await assessment.processAssessment(mappedResponses, mappedQuestions)
     
     // Save results
     const { error } = await this.supabase
@@ -272,7 +295,7 @@ export class AssessmentOrchestrator {
       .select('*')
       .eq('test_type_id', testTypeId)
       .eq('is_active', true)
-      .order('order_index', { ascending: true, nullsLast: true })
+      .order('order_index', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true })
 
     if (error) throw error

@@ -1,5 +1,6 @@
 // src/lib/services/ReportService.ts
 import type { GenerateReportRequest, ReportStatus } from '@/types/api.types'
+import { useState, useEffect, useCallback } from 'react'
 
 export interface ReportTemplate {
   id: string
@@ -177,7 +178,7 @@ export class ReportService {
     timeRange: { start: string; end: string }
     groupBy?: string
     filters?: Record<string, any>
-    format?: 'pdf' | 'csv' | 'xlsx'
+    format?: 'pdf' | 'csv' | 'json'
   }): Promise<{ reportId: string }> {
     return this.generateReport({
       type: 'analytics',

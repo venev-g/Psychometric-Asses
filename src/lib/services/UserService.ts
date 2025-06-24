@@ -1,6 +1,7 @@
 // src/lib/services/UserService.ts
 import type { User, UserProfile, UserActivity } from '@/types/user.types'
 import type { UserSearchParams, BulkUserActionData } from '@/lib/validations/user'
+import { useState, useEffect, useCallback } from 'react' 
 
 export interface UserStats {
   totalUsers: number

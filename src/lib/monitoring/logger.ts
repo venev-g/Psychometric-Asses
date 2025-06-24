@@ -1,3 +1,5 @@
+import { useMemo as reactUseMemo } from 'react';
+
 // src/lib/monitoring/logger.ts
 export enum LogLevel {
   DEBUG = 0,
@@ -285,4 +287,17 @@ export function useLogger(context?: string) {
     }
     return logger
   }, [context])
+}
+// Import React's useMemo if in a React environment
+
+// Implement useMemo fallback for non-React environments
+function useMemo<T>(factory: () => T, deps: ReadonlyArray<any>): T {
+  if (typeof reactUseMemo === 'function') {
+    // If React's useMemo is available, use it
+    return reactUseMemo(factory, deps);
+  } else {
+    // Simple fallback implementation for non-React environments
+    // This will always run the factory function - no memoization in non-React environments
+    return factory();
+  }
 }

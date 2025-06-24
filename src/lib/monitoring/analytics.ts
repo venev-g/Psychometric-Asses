@@ -221,7 +221,7 @@ export class Analytics {
       loadTime: navigation.loadEventEnd - navigation.loadEventStart,
       domContentLoadedTime: navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
       firstContentfulPaint: paintEntries.find(entry => entry.name === 'first-contentful-paint')?.startTime || 0,
-      timeToInteractive: navigation.domInteractive - navigation.navigationStart,
+      timeToInteractive: navigation.domInteractive - navigation.startTime,
       page: window.location.pathname
     }
 
