@@ -7,43 +7,43 @@ export type TablesInsert<T extends keyof Database['public']['Tables']> = Databas
 export type TablesUpdate<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update']
 
 // Specific table types
-export type User = Tables<'users'>
+export type UserProfile = Tables<'user_profiles'>
 export type TestConfiguration = Tables<'test_configurations'>
 export type TestType = Tables<'test_types'>
+export type TestSequence = Tables<'test_sequences'>
 export type Question = Tables<'questions'>
-export type QuestionOption = Tables<'question_options'>
 export type AssessmentSession = Tables<'assessment_sessions'>
 export type UserResponse = Tables<'user_responses'>
 export type AssessmentResult = Tables<'assessment_results'>
 
 // Insert types
-export type UserInsert = TablesInsert<'users'>
+export type UserProfileInsert = TablesInsert<'user_profiles'>
 export type TestConfigurationInsert = TablesInsert<'test_configurations'>
 export type TestTypeInsert = TablesInsert<'test_types'>
+export type TestSequenceInsert = TablesInsert<'test_sequences'>
 export type QuestionInsert = TablesInsert<'questions'>
-export type QuestionOptionInsert = TablesInsert<'question_options'>
 export type AssessmentSessionInsert = TablesInsert<'assessment_sessions'>
 export type UserResponseInsert = TablesInsert<'user_responses'>
 export type AssessmentResultInsert = TablesInsert<'assessment_results'>
 
 // Update types
-export type UserUpdate = TablesUpdate<'users'>
+export type UserProfileUpdate = TablesUpdate<'user_profiles'>
 export type TestConfigurationUpdate = TablesUpdate<'test_configurations'>
 export type TestTypeUpdate = TablesUpdate<'test_types'>
+export type TestSequenceUpdate = TablesUpdate<'test_sequences'>
 export type QuestionUpdate = TablesUpdate<'questions'>
-export type QuestionOptionUpdate = TablesUpdate<'question_options'>
 export type AssessmentSessionUpdate = TablesUpdate<'assessment_sessions'>
 export type UserResponseUpdate = TablesUpdate<'user_responses'>
 export type AssessmentResultUpdate = TablesUpdate<'assessment_results'>
 
 // Enums
-export type QuestionType = Database['public']['Enums']['question_type']
-export type SessionStatus = Database['public']['Enums']['session_status']
-export type UserRole = Database['public']['Enums']['user_role']
+export type QuestionType = 'multiple_choice' | 'rating_scale' | 'yes_no' | 'multiselect'
+export type SessionStatus = 'started' | 'in_progress' | 'completed' | 'abandoned'
+export type UserRole = 'user' | 'admin'
 
 // Joined/computed types
 export interface QuestionWithOptions extends Question {
-  question_options: QuestionOption[]
+  options: any // The options are stored directly in the questions table
 }
 
 export interface TestTypeWithQuestions extends TestType {
@@ -55,7 +55,8 @@ export interface AssessmentSessionWithResults extends AssessmentSession {
   test_configuration: TestConfiguration
 }
 
-export interface UserWithSessions extends User {
+export interface UserWithSessions {
+  profile: UserProfile
   assessment_sessions: AssessmentSession[]
 }
 
@@ -115,7 +116,7 @@ export interface ApiResponse<T> {
 }
 
 // Profile types
-export interface UserProfile extends User {
+export interface UserProfileWithStats extends Tables<'user_profiles'> {
   total_assessments: number
   completed_assessments: number
   average_score?: number
