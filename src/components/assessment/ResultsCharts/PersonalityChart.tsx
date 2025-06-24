@@ -89,7 +89,7 @@ export function PersonalityChart({ scores, maxScore = 100 }: PersonalityChartPro
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <span>Your Dominant Style: {dominantTypeInfo.label}</span>
-              <Badge variant="primary">Primary</Badge>
+              <Badge variant="default">Primary</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -136,7 +136,7 @@ export function PersonalityChart({ scores, maxScore = 100 }: PersonalityChartPro
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="text-sm font-medium">{type.score}%</span>
-                    {index === 0 && <Badge variant="primary" size="sm">Primary</Badge>}
+                    {index === 0 && <Badge variant="default" size="sm">Primary</Badge>}
                   </div>
                 </div>
               ))}

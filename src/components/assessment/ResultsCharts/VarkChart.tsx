@@ -166,7 +166,7 @@ export function VarkChart({ scores, maxScore = 100 }: VarkChartProps) {
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm font-medium">{style.score}%</span>
-                      {index === 0 && <Badge variant="primary" size="sm">Preferred</Badge>}
+                      {index === 0 && <Badge variant="default" size="sm">Preferred</Badge>}
                     </div>
                   </div>
                 )

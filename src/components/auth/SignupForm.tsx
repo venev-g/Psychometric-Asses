@@ -9,16 +9,9 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { signupSchema } from '@/lib/validations/auth'
+import { signUpSchema, type SignUpFormData } from '@/lib/validations/auth'
 import Link from 'next/link'
 import type { Database } from '@/types/database.types'
-
-type SignupData = {
-  email: string
-  password: string
-  confirmPassword: string
-  fullName: string
-}
 
 export function SignupForm() {
   const [loading, setLoading] = useState(false)
@@ -34,11 +27,18 @@ export function SignupForm() {
     register,
     handleSubmit,
     formState: { errors }
-  } = useForm<SignupData>({
-    resolver: zodResolver(signupSchema)
+  } = useForm<SignUpFormData>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+      confirmPassword: '',
+      fullName: '',
+      acceptTerms: false
+    }
   })
 
-  const onSubmit = async (data: SignupData) => {
+  const onSubmit = async (data: SignUpFormData) => {
     try {
       setLoading(true)
       setMessage(null)
@@ -130,6 +130,25 @@ export function SignupForm() {
         {errors.confirmPassword && (
           <p className="text-sm text-red-600 mt-1">{errors.confirmPassword.message}</p>
         )}
+      </div>
+      
+      <div className="flex items-start">
+        <div className="flex items-center h-5">
+          <input
+            id="acceptTerms"
+            type="checkbox"
+            {...register('acceptTerms')}
+            className="w-4 h-4 border border-gray-300 rounded"
+          />
+        </div>
+        <div className="ml-3 text-sm">
+          <Label htmlFor="acceptTerms" className="text-gray-600">
+            I accept the terms and conditions
+          </Label>
+          {errors.acceptTerms && (
+            <p className="text-sm text-red-600">{errors.acceptTerms.message}</p>
+          )}
+        </div>
       </div>
 
       <Button type="submit" disabled={loading} className="w-full">

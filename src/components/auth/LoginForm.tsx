@@ -9,7 +9,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { loginSchema } from '@/lib/validations/auth'
+import { signInSchema } from '@/lib/validations/auth'
 import Link from 'next/link'
 import type { Database } from '@/types/database.types'
 
@@ -33,7 +33,7 @@ export function LoginForm() {
     handleSubmit,
     formState: { errors }
   } = useForm<LoginData>({
-    resolver: zodResolver(loginSchema)
+    resolver: zodResolver(signInSchema),
   })
 
   const onSubmit = async (data: LoginData) => {
