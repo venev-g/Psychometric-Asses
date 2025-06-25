@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Progress } from '@/components/ui/Progress'
-import { TestResponse } from '@/lib/data/testQuestions'
+import { TestResponse } from '@/types/assessment.types'
 import { Brain, Users, Lightbulb, ArrowRight, TrendingUp, Target, Star } from 'lucide-react'
 
 interface PartFeedbackProps {

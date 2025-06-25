@@ -103,6 +103,15 @@ export interface VarkScores {
   kinesthetic: number
 }
 
+export interface TestResponse {
+  questionId: string
+  question: string
+  response: number | string
+  testType: string
+  part?: number
+  category?: string
+}
+
 export interface AssessmentFlowData {
   currentTest: {
     testType: TestType

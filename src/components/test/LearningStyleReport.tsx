@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { TestResponse } from '@/lib/data/testQuestions'
+import { TestResponse } from '@/types/assessment.types'
 import { Eye, Ear, BookOpen, Hand, ArrowRight } from 'lucide-react'
 
 interface LearningStyleReportProps {

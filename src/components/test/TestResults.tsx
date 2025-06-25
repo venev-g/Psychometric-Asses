@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { TestResponse } from '@/lib/data/testQuestions'
+import { TestResponse } from '@/types/assessment.types'
 import { Brain, Users, Lightbulb, Download, RefreshCw, Trophy, TrendingUp, Target, BookOpen } from 'lucide-react'
 
 interface TestResultsProps {

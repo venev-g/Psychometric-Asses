@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { TestResponse } from '@/lib/data/testQuestions'
+import { TestResponse } from '@/types/assessment.types'
 import { Brain, Users, Lightbulb, ArrowRight } from 'lucide-react'
 
 interface DominantIntelligenceReportProps {
