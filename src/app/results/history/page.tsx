@@ -47,7 +47,7 @@ export default async function ResultsHistoryPage() {
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-gray-500 mb-4">No assessments found</p>
-            <Link href="/assessment/start">
+            <Link href="/test/start">
               <Button>Start Your First Assessment</Button>
             </Link>
           </CardContent>
@@ -66,13 +66,17 @@ export default async function ResultsHistoryPage() {
                       {session.test_configurations?.description}
                     </p>
                     
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <span>Started: {new Date(session.started_at).toLocaleDateString()}</span>
+                    <div className="text-sm text-gray-600">
+                      <span>Started: {session.started_at ? new Date(session.started_at).toLocaleDateString() : 'Unknown'}</span>
                       {session.completed_at && (
-                        <span>Completed: {new Date(session.completed_at).toLocaleDateString()}</span>
+                        <span className="ml-4">
+                          Completed: {new Date(session.completed_at).toLocaleDateString()}
+                        </span>
                       )}
-                      <Badge variant={getStatusColor(session.status)}>
-                        {session.status.replace('_', ' ').toUpperCase()}
+                    </div>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Badge variant={getStatusColor(session.status || 'unknown')}>
+                        {session.status ? session.status.replace('_', ' ').toUpperCase() : 'UNKNOWN'}
                       </Badge>
                     </div>
                   </div>

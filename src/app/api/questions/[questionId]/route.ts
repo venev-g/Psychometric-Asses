@@ -1,6 +1,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { questionResponseSchema } from '@/lib/validations/assessment'
+import { z } from 'zod'
+
+// Question update schema
+const questionUpdateSchema = z.object({
+  question_text: z.string().min(1).optional(),
+  question_type: z.enum(['multiple_choice', 'rating_scale', 'yes_no', 'multiselect']).optional(),
+  options: z.any().optional(),
+  category: z.string().optional(),
+  subcategory: z.string().optional(),
+  weight: z.number().min(0).optional(),
+  is_active: z.boolean().optional(),
+  order_index: z.number().min(0).optional(),
+  test_type_id: z.string().uuid().optional()
+})
 
 interface RouteParams {
   params: {
@@ -41,14 +54,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
 
     // Validate input
-    const validatedData = questionResponseSchema.partial().parse(body)
+    const validatedData = questionUpdateSchema.parse(body)
 
     const { data: question, error } = await supabase
       .from('questions')
-      .update({
-        ...validatedData,
-        updated_at: new Date().toISOString()
-      })
+      .update(validatedData)
       .eq('id', params.questionId)
       .select()
       .single()

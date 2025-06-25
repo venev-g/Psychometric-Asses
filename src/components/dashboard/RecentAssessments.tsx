@@ -71,7 +71,7 @@ export function RecentAssessments({ assessments }: RecentAssessmentsProps) {
         {assessments.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500 mb-4">No assessments yet</p>
-            <Link href="/assessment/start">
+            <Link href="/test/start">
               <Button>Start Your First Assessment</Button>
             </Link>
           </div>

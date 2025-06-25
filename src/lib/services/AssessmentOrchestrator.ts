@@ -52,27 +52,25 @@ export class AssessmentOrchestrator {
 
   async getCurrentTest(sessionId: string): Promise<any> {
     const session = await this.getAssessmentSession(sessionId)
+    const config = await this.configService.getConfigurationWithSequence(session.configuration_id || '')
     
-    if (session.status === 'completed') {
-      return null
+    if (!config.test_sequences || !session.current_test_index) {
+      throw new Error('No test sequences found or invalid session state')
     }
-
-    const config = await this.configService.getConfigurationWithSequence(session.configuration_id)
     
-    if (!config.test_sequences || session.current_test_index >= config.test_sequences.length) {
-      return null // All tests completed
-    }
-
     const currentTest = config.test_sequences[session.current_test_index]
-    const questions = await this.getQuestionsForTest(currentTest.test_types.id)
+    if (!currentTest) {
+      throw new Error('Current test not found')
+    }
+    
+    const testType = currentTest.test_types
+    const questions = await this.getQuestionsForTest(testType.id)
     
     return {
-      testType: currentTest.test_types,
+      testType,
       questions,
       currentIndex: session.current_test_index,
-      totalTests: config.test_sequences.length,
-      isRequired: currentTest.is_required,
-      session
+      totalTests: config.test_sequences.length
     }
   }
 
@@ -121,15 +119,15 @@ export class AssessmentOrchestrator {
     isAssessmentComplete: boolean 
   }> {
     const session = await this.getAssessmentSession(sessionId)
-    const config = await this.configService.getConfigurationWithSequence(session.configuration_id)
+    const config = await this.configService.getConfigurationWithSequence(session.configuration_id || '')
     
     // Process current test results
-    if (config.test_sequences && session.current_test_index < config.test_sequences.length) {
+    if (config.test_sequences && session.current_test_index && session.current_test_index < config.test_sequences.length) {
       await this.processTestResults(sessionId, session.current_test_index, config)
     }
     
     // Move to next test or complete session
-    const nextIndex = session.current_test_index + 1
+    const nextIndex = (session.current_test_index || 0) + 1
     const isComplete = nextIndex >= (config.test_sequences?.length || 0)
     
     const updateData: Tables['assessment_sessions']['Update'] = {
@@ -205,29 +203,32 @@ export class AssessmentOrchestrator {
     
     // Process with appropriate assessment
     const assessment = AssessmentFactory.create(testType.slug)
+    
     // Map the database response to match UserResponse interface
     const mappedResponses = responses.map(r => ({
-      sessionId: r.session_id,
-      questionId: r.question_id,
+      sessionId: r.session_id || '',
+      questionId: r.question_id || '',
       responseValue: r.response_value,
       responseTimeMs: r.response_time_ms ?? undefined,
-      createdAt: new Date(r.created_at),
+      createdAt: r.created_at ? new Date(r.created_at) : new Date(),
       id: r.id
     }));
+    
     // Map the database questions to match Question interface
     const mappedQuestions = questions.map(q => ({
       id: q.id,
-      testTypeId: q.test_type_id,
+      testTypeId: q.test_type_id || '',
       questionText: q.question_text,
-      questionType: q.question_type,
-      options: q.options,
+      questionType: q.question_type as 'multiple_choice' | 'rating_scale' | 'yes_no' | 'multiselect',
+      options: q.options as any || [],
       category: q.category || undefined,
       subcategory: q.subcategory || undefined,
-      weight: q.weight,
-      isActive: q.is_active,
+      weight: q.weight || 1.0,
+      isActive: q.is_active || false,
       orderIndex: q.order_index || undefined,
-      createdAt: new Date(q.created_at)
+      createdAt: q.created_at ? new Date(q.created_at) : new Date()
     }));
+    
     const result = await assessment.processAssessment(mappedResponses, mappedQuestions)
     
     // Save results
@@ -256,7 +257,8 @@ export class AssessmentOrchestrator {
     // Basic validation based on question type
     switch (question.question_type) {
       case 'multiple_choice':
-        if (!question.options?.some((option: any) => option.value === response)) {
+        const options = question.options as any[]
+        if (Array.isArray(options) && !options.some((option: any) => option.value === response)) {
           throw new Error('Invalid response for multiple choice question')
         }
         break
@@ -271,8 +273,9 @@ export class AssessmentOrchestrator {
         }
         break
       case 'multiselect':
+        const multiselectOptions = question.options as any[]
         if (!Array.isArray(response) || 
-            !response.every(r => question.options?.some((option: any) => option.value === r))) {
+            (Array.isArray(multiselectOptions) && !response.every(r => multiselectOptions.some((option: any) => option.value === r)))) {
           throw new Error('Invalid response for multiselect question')
         }
         break

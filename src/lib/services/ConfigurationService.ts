@@ -151,11 +151,15 @@ export class ConfigurationService {
   }
 
   async reorderTestSequence(configId: string, sequences: Array<{id: string, order: number}>): Promise<void> {
-    const { error } = await this.supabase.rpc('reorder_test_sequences', {
-      config_id: configId,
-      sequence_updates: sequences
-    })
+    // Update each sequence individually
+    for (const sequence of sequences) {
+      const { error } = await this.supabase
+        .from('test_sequences')
+        .update({ sequence_order: sequence.order })
+        .eq('id', sequence.id)
+        .eq('configuration_id', configId)
 
-    if (error) throw error
+      if (error) throw error
+    }
   }
 }

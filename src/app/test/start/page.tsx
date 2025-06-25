@@ -1,10 +1,9 @@
-// src/app/dashboard/page.tsx
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { ModernDashboard } from '@/components/dashboard/ModernDashboard'
+import { StartTestPage } from '@/components/test/StartTestPage'
 import { redirect } from 'next/navigation'
 
-export default async function DashboardPage() {
+export default async function StartTestPageServer() {
   const supabase = await createClient()
   
   // Check authentication
@@ -14,5 +13,5 @@ export default async function DashboardPage() {
     redirect('/auth/login')
   }
 
-  return <ModernDashboard user={user} />
-}
+  return <StartTestPage user={user} />
+} 

@@ -2,6 +2,8 @@ import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { ConfigurationForm } from '@/components/admin/ConfigurationForm'
 import { redirect } from 'next/navigation'
+import { transformTestType } from '@/lib/utils/typeTransformers'
+import type { TestType } from '@/types/assessment.types'
 
 export default async function NewConfigurationPage() {
   const supabase = await createClient()
@@ -23,20 +25,23 @@ export default async function NewConfigurationPage() {
     redirect('/dashboard')
   }
 
-  // Get test types for the form
+  // Get all test types for the form
   const { data: testTypes } = await supabase
     .from('test_types')
     .select('*')
     .eq('is_active', true)
     .order('name')
 
+  // Transform database types to component types
+  const transformedTestTypes: TestType[] = (testTypes || []).map(transformTestType)
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Create New Configuration</h1>
-        <p className="text-gray-600">Set up a new assessment configuration</p>
+        <h1 className="text-3xl font-bold text-gray-900">New Configuration</h1>
+        <p className="text-gray-600">Create a new assessment configuration</p>
       </div>
-      <ConfigurationForm testTypes={testTypes || []} />
+      <ConfigurationForm testTypes={transformedTestTypes} />
     </div>
   )
 }

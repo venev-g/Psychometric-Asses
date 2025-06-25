@@ -49,13 +49,13 @@ export default async function ProfilePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-4">
-                <Avatar className="h-16 w-16">
+                <Avatar className="w-24 h-24">
                   <AvatarImage 
-                    src={profile?.avatar_url} 
-                    alt={profile?.full_name || user.email || 'User'} 
+                    src={profile?.avatar_url || undefined} 
+                    alt={profile?.full_name || 'User avatar'}
                   />
-                  <AvatarFallback>
-                    {(profile?.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                  <AvatarFallback className="text-2xl font-semibold">
+                    {profile?.full_name?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div>

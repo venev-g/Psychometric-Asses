@@ -21,7 +21,7 @@ export function QuickActions({ hasInProgressAssessment, inProgressSessionId }: Q
       icon: Play,
       href: hasInProgressAssessment 
         ? `/assessment/${inProgressSessionId}`
-        : '/assessment/start',
+        : '/test/start',
       variant: 'default' as const,
       featured: true
     },

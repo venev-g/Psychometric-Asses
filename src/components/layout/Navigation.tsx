@@ -29,7 +29,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     name: 'Start Assessment',
-    href: '/assessment/start',
+    href: '/test/start',
     icon: Play,
     description: 'Begin a new assessment'
   },

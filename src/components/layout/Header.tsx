@@ -35,7 +35,7 @@ export function Header() {
                   Dashboard
                 </Link>
                 <Link 
-                  href="/assessment/start" 
+                  href="/test/start" 
                   className="text-gray-700 hover:text-blue-600 font-medium"
                 >
                   Assessments

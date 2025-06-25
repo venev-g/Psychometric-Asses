@@ -2,6 +2,8 @@ import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { TestTypeForm } from '@/components/admin/TestTypeForm'
 import { redirect } from 'next/navigation'
+import { transformTestType } from '@/lib/utils/typeTransformers'
+import type { TestType } from '@/types/assessment.types'
 
 interface TestTypePageProps {
   params: {
@@ -40,13 +42,16 @@ export default async function TestTypePage({ params }: TestTypePageProps) {
     redirect('/admin/test-types')
   }
 
+  // Transform database types to component types
+  const transformedTestType: TestType = transformTestType(testType)
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Edit Test Type</h1>
         <p className="text-gray-600">Modify test type settings and configuration</p>
       </div>
-      <TestTypeForm testType={testType} />
+      <TestTypeForm testType={transformedTestType} />
     </div>
   )
 }

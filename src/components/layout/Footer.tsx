@@ -30,17 +30,17 @@ export function Footer() {
             <h4 className="font-semibold text-gray-900 mb-4">Assessments</h4>
             <ul className="space-y-2 text-sm text-gray-600">
               <li>
-                <Link href="/assessment/start" className="hover:text-gray-900">
+                <Link href="/test/start" className="hover:text-gray-900">
                   Multiple Intelligence
                 </Link>
               </li>
               <li>
-                <Link href="/assessment/start" className="hover:text-gray-900">
+                <Link href="/test/start" className="hover:text-gray-900">
                   Personality Pattern
                 </Link>
               </li>
               <li>
-                <Link href="/assessment/start" className="hover:text-gray-900">
+                <Link href="/test/start" className="hover:text-gray-900">
                   Learning Style
                 </Link>
               </li>

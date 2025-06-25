@@ -1,6 +1,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { questionResponseSchema } from '@/lib/validations/assessment'
+import { z } from 'zod'
+
+// Question creation schema
+const questionCreateSchema = z.object({
+  question_text: z.string().min(1, 'Question text is required'),
+  question_type: z.enum(['multiple_choice', 'rating_scale', 'yes_no', 'multiselect']),
+  options: z.any().optional(),
+  category: z.string().optional(),
+  subcategory: z.string().optional(),
+  weight: z.number().min(0).default(1.0),
+  is_active: z.boolean().default(true),
+  order_index: z.number().min(0).optional(),
+  test_type_id: z.string().uuid('Invalid test type ID')
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,7 +64,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Validate input
-    const validatedData = questionResponseSchema.parse(body)
+    const validatedData = questionCreateSchema.parse(body)
 
     const { data: question, error } = await supabase
       .from('questions')

@@ -2,6 +2,8 @@ import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { ConfigurationForm } from '@/components/admin/ConfigurationForm'
 import { redirect } from 'next/navigation'
+import { transformTestConfiguration, transformTestType } from '@/lib/utils/typeTransformers'
+import type { TestConfiguration, TestType } from '@/types/assessment.types'
 
 interface ConfigurationPageProps {
   params: {
@@ -53,6 +55,10 @@ export default async function ConfigurationPage({ params }: ConfigurationPagePro
     .eq('is_active', true)
     .order('name')
 
+  // Transform database types to component types
+  const transformedConfiguration: TestConfiguration = transformTestConfiguration(configuration)
+  const transformedTestTypes: TestType[] = (testTypes || []).map(transformTestType)
+
   return (
     <div className="space-y-6">
       <div>
@@ -60,8 +66,8 @@ export default async function ConfigurationPage({ params }: ConfigurationPagePro
         <p className="text-gray-600">Modify assessment configuration settings</p>
       </div>
       <ConfigurationForm 
-        configuration={configuration} 
-        testTypes={testTypes || []} 
+        configuration={transformedConfiguration} 
+        testTypes={transformedTestTypes} 
       />
     </div>
   )
