@@ -116,30 +116,45 @@ Let's start with your Dominant Intelligence assessment. Ready to dive in?`
     }
   }, [chatMessages])
 
-  // Start the first question when component mounts
-  useEffect(() => {
+  // Show the next question and options (at currentQuestion index)
+  const showNextQuestion = () => {
     const questions = getCurrentQuestions()
-    if (questions.length > 0) {
-      const firstQuestion = questions[0]
-      setTimeout(() => {
-        if (firstQuestion.options) {
-          setChatMessages(prev => [...prev, {
-            type: 'dynamicOptions',
-            content: firstQuestion.text,
-            dynamicOptions: firstQuestion.options,
-            testType: currentTest
-          }])
-        } else {
-          setChatMessages(prev => [...prev, {
-            type: 'options',
-            content: firstQuestion.text,
-            options: responseOptions,
-            testType: currentTest
-          }])
-        }
-      }, 2000) // Wait 2 seconds after welcome message
+    const nextQ = questions[currentQuestion]
+    if (!nextQ) return
+    if (currentTest === 'learning' && nextQ.options) {
+      setChatMessages(prev => [...prev, 
+        { type: 'bot', content: nextQ.text },
+        { type: 'dynamicOptions', content: '', dynamicOptions: nextQ.options, testType: currentTest }
+      ])
+    } else {
+      setChatMessages(prev => [...prev, 
+        { type: 'bot', content: nextQ.text },
+        { type: 'options', content: '', options: responseOptions, testType: currentTest }
+      ])
     }
+  }
+
+  useEffect(() => {
+    setCurrentQuestion(0)
+    setChatMessages([
+      {
+        type: 'bot',
+        content: `Hey there! 👋 I'm your AI assessment companion. We're going to explore your unique strengths through 3 exciting tests:<br/><br/>🧠 <b>Test 1: Dominant Intelligence</b> - Discover your natural talents (24 questions)<br/>👥 <b>Test 2: Personality Pattern</b> - Understand your character type (16 questions)<br/>📚 <b>Test 3: Learning Style</b> - Find your optimal learning approach (6 questions)<br/><br/>Let's start with your Dominant Intelligence assessment. Ready to dive in?`
+      }
+    ])
+    setTimeout(() => {
+      showNextQuestion()
+    }, 1200)
   }, []) // Run only once when component mounts
+
+  // Improved auto-scroll: only scroll when a new message is added
+  const prevMsgCount = useRef(0)
+  useEffect(() => {
+    if (chatMessages.length > prevMsgCount.current) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      prevMsgCount.current = chatMessages.length
+    }
+  }, [chatMessages])
 
   const showMacroFeedback = (type: 'part' | 'test', completedPart?: number, completedTest?: TestType) => {
     let feedbackContent = ''
@@ -243,7 +258,10 @@ Ready for what's next? 🚀✨`
           }, 3000)
         }, 1000)
       } else {
-        continueToNextQuestion(nextQuestion)
+        setCurrentQuestion(nextQuestion)
+        setTimeout(() => {
+          showNextQuestion()
+        }, 800)
       }
     } else {
       if (nextQuestion >= questions.length) {
@@ -254,7 +272,10 @@ Ready for what's next? 🚀✨`
           }, 3000)
         }, 1000)
       } else {
-        continueToNextQuestion(nextQuestion)
+        setCurrentQuestion(nextQuestion)
+        setTimeout(() => {
+          showNextQuestion()
+        }, 800)
       }
     }
   }
@@ -314,26 +335,6 @@ What would you like to do next?`
         { type: 'options', content: '', options: responseOptions, testType: 'dominant' }
       ])
     }, 1500)
-  }
-
-  const continueToNextQuestion = (nextQuestionIndex: number) => {
-    setCurrentQuestion(nextQuestionIndex)
-    setTimeout(() => {
-      const questions = getCurrentQuestions()
-      const nextQ = questions[nextQuestionIndex]
-      
-      if (currentTest === 'learning' && nextQ.options) {
-        setChatMessages(prev => [...prev, 
-          { type: 'bot', content: nextQ.text },
-          { type: 'dynamicOptions', content: '', dynamicOptions: nextQ.options, testType: currentTest }
-        ])
-      } else {
-        setChatMessages(prev => [...prev, 
-          { type: 'bot', content: nextQ.text },
-          { type: 'options', content: '', options: responseOptions, testType: currentTest }
-        ])
-      }
-    }, 800)
   }
 
   const continueFromReport = (nextTest: TestType) => {
@@ -418,8 +419,8 @@ What would you like to do next?`
       </div>
 
       {/* Header */}
-      <div className="bg-white/80 shadow-sm border-b backdrop-blur-md z-10">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="bg-white/80 shadow-sm border-b backdrop-blur-md z-10 w-full">
+        <div className="w-full flex items-center justify-between px-8 py-3">
           <div className="flex items-center space-x-4">
             <Button variant="ghost" onClick={onBack} className="text-gray-600">
               <ArrowLeft className="w-5 h-5 mr-2" />
@@ -443,12 +444,21 @@ What would you like to do next?`
       </div>
 
       {/* Chat Interface */}
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] w-full z-10">
-        <div className="w-full max-w-3xl flex-1 flex flex-col justify-end">
-          <div className="flex-1 overflow-y-auto px-0 py-6 space-y-4" ref={scrollAreaRef} style={{height: 'calc(100vh - 120px)'}}>
+      <div className="flex flex-col h-[calc(100vh-56px)] w-full z-10">
+        <div className="w-full flex-1 flex flex-col justify-end">
+          <div className="flex-1 overflow-y-auto px-0 py-6 space-y-4" ref={scrollAreaRef} style={{height: 'calc(100vh - 120px)', minHeight: 0, maxHeight: 'calc(100vh - 120px)'}}>
             {chatMessages.map((message, index) => (
-              <div key={index} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}> 
-                <div className={`max-w-[80%] ${message.type === 'user' ? 'bg-indigo-600 text-white ml-auto' : 'bg-white/90 text-gray-900 mr-auto'} rounded-2xl px-5 py-3 shadow-md font-medium text-base break-words`}>
+              <div
+                key={index}
+                className={`flex ${message.type === 'user' ? 'justify-end items-end' : 'justify-start items-start'} w-full`}
+              >
+                <div
+                  className={`max-w-[80%] ${
+                    message.type === 'user'
+                      ? 'bg-indigo-600 text-white ml-auto mr-0'
+                      : 'bg-white/90 text-gray-900 ml-0 mr-auto'
+                  } rounded-2xl px-5 py-3 shadow-md font-medium text-base break-words`}
+                >
                   {message.type === 'bot' || message.type === 'macroFeedback' ? (
                     <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: message.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
                   ) : message.type === 'user' ? (
