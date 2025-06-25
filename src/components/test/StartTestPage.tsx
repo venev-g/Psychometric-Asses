@@ -5,16 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Brain, Users, BookOpen, ArrowRight, CheckCircle } from 'lucide-react'
 import { PersonalityTest } from './PersonalityTest'
+import type { FormattedQuestion } from '@/lib/services/QuestionsService'
 
 interface StartTestPageProps {
   user: any
+  questions: {
+    dominantIntelligence: FormattedQuestion[]
+    personalityPattern: FormattedQuestion[]
+    learningStyle: FormattedQuestion[]
+  }
 }
 
-export function StartTestPage({ user }: StartTestPageProps) {
+export function StartTestPage({ user, questions }: StartTestPageProps) {
   const [testStarted, setTestStarted] = useState(false)
 
   if (testStarted) {
-    return <PersonalityTest onBack={() => setTestStarted(false)} user={user} />
+    return <PersonalityTest onBack={() => setTestStarted(false)} user={user} questions={questions} />
   }
 
   return (
@@ -167,4 +173,4 @@ export function StartTestPage({ user }: StartTestPageProps) {
       </div>
     </div>
   )
-} 
+}

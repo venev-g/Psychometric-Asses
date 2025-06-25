@@ -5,12 +5,8 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Progress } from '@/components/ui/Progress'
 import { ArrowLeft, Bot, User, Brain, Users, BookOpen, LogOut, Calculator, Atom, Palette, BarChart3, Eye, Sparkles, Zap, Target, Trophy, Star, Lightbulb, Music, Camera, Globe } from 'lucide-react'
-import { 
-  dominantIntelligenceQuestions, 
-  personalityPatternQuestions, 
-  learningStyleQuestions,
-  TestResponse
-} from '@/lib/data/testQuestions'
+import type { FormattedQuestion } from '@/lib/services/QuestionsService'
+import type { TestResponse } from '@/types/assessment.types'
 import TestResults from './TestResults'
 import DominantIntelligenceReport from './DominantIntelligenceReport'
 import PersonalityReport from './PersonalityReport'
@@ -21,6 +17,11 @@ import { Avatar, AvatarImage, AvatarFallback, EnhancedAvatar } from '@/component
 interface PersonalityTestProps {
   onBack: () => void
   user: any
+  questions: {
+    dominantIntelligence: FormattedQuestion[]
+    personalityPattern: FormattedQuestion[]
+    learningStyle: FormattedQuestion[]
+  }
 }
 
 type TestType = 'dominant' | 'personality' | 'learning'
@@ -37,7 +38,7 @@ type ChatMessage = {
   feedbackType?: 'part' | 'test'
 }
 
-export function PersonalityTest({ onBack, user }: PersonalityTestProps) {
+export function PersonalityTest({ onBack, user, questions }: PersonalityTestProps) {
   const [currentTest, setCurrentTest] = useState<TestType>('dominant')
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [responses, setResponses] = useState<TestResponse[]>([])
@@ -72,9 +73,9 @@ Let's start with your Dominant Intelligence assessment. Ready to dive in?`
 
   const getCurrentQuestions = () => {
     switch (currentTest) {
-      case 'dominant': return dominantIntelligenceQuestions
-      case 'personality': return personalityPatternQuestions
-      case 'learning': return learningStyleQuestions
+      case 'dominant': return questions.dominantIntelligence
+      case 'personality': return questions.personalityPattern
+      case 'learning': return questions.learningStyle
     }
   }
 
@@ -231,7 +232,7 @@ Ready for what's next? 🚀✨`
     const questions = getCurrentQuestions()
     const question = questions[currentQuestion]
     const newResponse: TestResponse = {
-      questionId: question.id,
+      questionId: question.id.toString(),
       question: question.text,
       response: value,
       testType: currentTest,
@@ -339,9 +340,9 @@ What would you like to do next?`
     }])
     
     setTimeout(() => {
-      const nextQuestionIndex = dominantIntelligenceQuestions.findIndex(q => q.part === fromPart + 1)
+      const nextQuestionIndex = questions.dominantIntelligence.findIndex(q => q.part === fromPart + 1)
       setCurrentQuestion(nextQuestionIndex)
-      const nextQ = dominantIntelligenceQuestions[nextQuestionIndex]
+      const nextQ = questions.dominantIntelligence[nextQuestionIndex]
       setChatMessages(prev => [...prev, 
         { type: 'bot', content: nextQ.text },
         { type: 'options', content: '', options: responseOptions, testType: 'dominant' }
@@ -367,8 +368,8 @@ What would you like to do next?`
       }])
       
       setTimeout(() => {
-        const questions = nextTest === 'personality' ? personalityPatternQuestions : learningStyleQuestions
-        const nextQ = questions[0]
+        const questionsArr = nextTest === 'personality' ? questions.personalityPattern : questions.learningStyle
+        const nextQ = questionsArr[0]
         
         if (nextTest === 'learning' && nextQ.options) {
           setChatMessages(prev => [...prev, 
@@ -636,4 +637,4 @@ What would you like to do next?`
       )}
     </div>
   )
-} 
+}
