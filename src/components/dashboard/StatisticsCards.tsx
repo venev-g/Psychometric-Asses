@@ -34,9 +34,9 @@ export function StatCard({ title, value, icon, color, trend, delay = 0 }: StatCa
       transition={{ duration: 0.5, delay }}
       whileHover={{ y: -5 }}
     >
-      <Card className={`bg-gradient-to-br ${color} border-0 shadow-lg hover:shadow-xl transition-all duration-300`}>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
+      <Card className={`bg-gradient-to-br ${color} border-0 shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col`}>
+        <CardContent className="p-6 h-full flex-1 flex flex-col">
+          <div className="flex items-center justify-between flex-1">
             <div>
               <p className="text-sm font-medium text-white/80 mb-1">{title}</p>
               <p className="text-3xl font-bold text-white mb-2">{value}</p>
@@ -121,7 +121,7 @@ export function StatisticsGrid({ stats }: StatisticsGridProps) {
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
       {statCards.map((stat, index) => (
         <StatCard
           key={index}
