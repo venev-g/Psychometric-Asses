@@ -26,7 +26,8 @@ export interface FormattedQuestion {
   testType: 'dominant' | 'personality' | 'learning'
   part?: number
   category: string
-  options?: string[]
+  questionType?: 'multiple_choice' | 'rating_scale' | 'yes_no' | 'multiselect'
+  options?: any[] // Can be string[] or QuestionOption[]
 }
 
 export class QuestionsService {
@@ -134,12 +135,13 @@ export class QuestionsService {
       text: q.question_text,
       testType,
       category: q.category || 'general',
+      questionType: q.question_type as 'multiple_choice' | 'rating_scale' | 'yes_no' | 'multiselect',
       options: this.extractOptions(q.options, q.question_type),
       part: this.calculatePart(index, testType)
     }))
   }
 
-  private extractOptions(options: any, questionType: string): string[] | undefined {
+  private extractOptions(options: any, questionType: string): any[] | undefined {
     if (!options) return undefined
 
     try {
@@ -148,9 +150,25 @@ export class QuestionsService {
       }
 
       if (Array.isArray(options)) {
-        return options.map(opt => 
-          typeof opt === 'object' && opt.text ? opt.text : String(opt)
-        )
+        // Preserve the original structure for multiple_choice and multiselect
+        if (questionType === 'multiple_choice' || questionType === 'multiselect') {
+          return options.map(opt => {
+            if (typeof opt === 'object' && opt.text) {
+              return {
+                text: opt.text,
+                value: opt.value,
+                category: opt.category
+              }
+            } else {
+              return { text: String(opt), value: String(opt) }
+            }
+          })
+        } else {
+          // For other types like rating_scale, convert to simple strings if needed
+          return options.map(opt => 
+            typeof opt === 'object' && opt.text ? opt.text : String(opt)
+          )
+        }
       }
     } catch (error) {
       console.error('Failed to parse question options:', error)

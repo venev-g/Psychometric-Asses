@@ -124,12 +124,31 @@ Let's start with your Dominant Intelligence assessment. Ready to dive in?`
     const questions = getCurrentQuestions()
     const nextQ = questions[index]
     if (!nextQ) return
-    if (currentTest === 'learning' && nextQ.options) {
+
+    // Check the question type and handle it appropriately
+    if (nextQ.questionType === 'multiple_choice' && nextQ.options) {
+      // For multiple choice questions, use the question's own options
+      const formattedOptions = nextQ.options.map(opt => ({ 
+        value: opt.value, 
+        label: opt.text 
+      }));
+      
       setChatMessages(prev => [...prev, 
         { type: 'bot', content: nextQ.text },
-        { type: 'dynamicOptions', content: '', dynamicOptions: nextQ.options, testType: currentTest }
+        { type: 'options', content: '', options: formattedOptions, testType: currentTest }
       ])
-    } else {
+    } 
+    else if (nextQ.questionType === 'multiselect' && nextQ.options) {
+      // For multiselect questions like in learning style test
+      const optionTexts = nextQ.options.map(opt => opt.text);
+      
+      setChatMessages(prev => [...prev, 
+        { type: 'bot', content: nextQ.text },
+        { type: 'dynamicOptions', content: '', dynamicOptions: optionTexts, testType: currentTest }
+      ])
+    }
+    else {
+      // Default for rating_scale questions, use the standard response options
       setChatMessages(prev => [...prev, 
         { type: 'bot', content: nextQ.text },
         { type: 'options', content: '', options: responseOptions, testType: currentTest }
@@ -371,12 +390,30 @@ What would you like to do next?`
         const questionsArr = nextTest === 'personality' ? questions.personalityPattern : questions.learningStyle
         const nextQ = questionsArr[0]
         
-        if (nextTest === 'learning' && nextQ.options) {
+        // Use the same logic as in showNextQuestion to handle different question types
+        if (nextQ.questionType === 'multiple_choice' && nextQ.options) {
+          // For multiple choice questions, use the question's own options
+          const formattedOptions = nextQ.options.map(opt => ({ 
+            value: opt.value, 
+            label: opt.text 
+          }));
+          
           setChatMessages(prev => [...prev, 
             { type: 'bot', content: nextQ.text },
-            { type: 'dynamicOptions', content: '', dynamicOptions: nextQ.options, testType: nextTest }
+            { type: 'options', content: '', options: formattedOptions, testType: nextTest }
           ])
-        } else {
+        } 
+        else if (nextQ.questionType === 'multiselect' && nextQ.options) {
+          // For multiselect questions like in learning style test
+          const optionTexts = nextQ.options.map(opt => opt.text);
+          
+          setChatMessages(prev => [...prev, 
+            { type: 'bot', content: nextQ.text },
+            { type: 'dynamicOptions', content: '', dynamicOptions: optionTexts, testType: nextTest }
+          ])
+        }
+        else {
+          // Default for rating_scale questions, use the standard response options
           setChatMessages(prev => [...prev, 
             { type: 'bot', content: nextQ.text },
             { type: 'options', content: '', options: responseOptions, testType: nextTest }
