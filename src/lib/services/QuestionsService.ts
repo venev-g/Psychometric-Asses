@@ -72,12 +72,12 @@ export class QuestionsService {
     const testType = testTypes[0]
     console.log(`Found test type: ${testType.name} (${testType.id})`)
 
-    // Then get questions for this test type
+    // Then get questions for this test type - include questions with is_active=true OR is_active=null
     const { data, error } = await this.supabase
       .from('questions')
       .select('*')
       .eq('test_type_id', testType.id)
-      .eq('is_active', true)
+      .or('is_active.is.null,is_active.eq.true')
       .order('order_index')
 
     if (error) {
