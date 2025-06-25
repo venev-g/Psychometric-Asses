@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Progress } from '@/components/ui/Progress'
-import { ArrowLeft, Bot, User, Brain, Users, BookOpen, LogOut, Calculator, Atom, Palette, BarChart3, Eye, Sparkles, Zap, Target, Trophy, Star, Lightbulb, Heart, Music, Camera, Globe } from 'lucide-react'
+import { ArrowLeft, Bot, User, Brain, Users, BookOpen, LogOut, Calculator, Atom, Palette, BarChart3, Eye, Sparkles, Zap, Target, Trophy, Star, Lightbulb, Music, Camera, Globe } from 'lucide-react'
 import { 
   dominantIntelligenceQuestions, 
   personalityPatternQuestions, 
@@ -16,6 +16,7 @@ import DominantIntelligenceReport from './DominantIntelligenceReport'
 import PersonalityReport from './PersonalityReport'
 import LearningStyleReport from './LearningStyleReport'
 import PartFeedback from './PartFeedback'
+import { Avatar, AvatarImage, AvatarFallback, EnhancedAvatar } from '@/components/ui/Avatar'
 
 interface PersonalityTestProps {
   onBack: () => void
@@ -59,6 +60,7 @@ Let's start with your Dominant Intelligence assessment. Ready to dive in?`
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const questionRef = useRef<HTMLDivElement>(null)
+  const hasStarted = useRef(false)
 
   const responseOptions = [
     { value: 5, label: 'Strongly Agree' },
@@ -116,10 +118,10 @@ Let's start with your Dominant Intelligence assessment. Ready to dive in?`
     }
   }, [chatMessages])
 
-  // Show the next question and options (at currentQuestion index)
-  const showNextQuestion = () => {
+  // Show the next question and options (at given index)
+  const showNextQuestion = (index: number) => {
     const questions = getCurrentQuestions()
-    const nextQ = questions[currentQuestion]
+    const nextQ = questions[index]
     if (!nextQ) return
     if (currentTest === 'learning' && nextQ.options) {
       setChatMessages(prev => [...prev, 
@@ -134,7 +136,14 @@ Let's start with your Dominant Intelligence assessment. Ready to dive in?`
     }
   }
 
+  // Show the first question after welcome (does not update currentQuestion)
+  const showFirstQuestion = () => {
+    showNextQuestion(0)
+  }
+
   useEffect(() => {
+    if (hasStarted.current) return;
+    hasStarted.current = true;
     setCurrentQuestion(0)
     setChatMessages([
       {
@@ -143,7 +152,7 @@ Let's start with your Dominant Intelligence assessment. Ready to dive in?`
       }
     ])
     setTimeout(() => {
-      showNextQuestion()
+      showFirstQuestion()
     }, 1200)
   }, []) // Run only once when component mounts
 
@@ -250,6 +259,7 @@ Ready for what's next? 🚀✨`
             showPartCompletionOptions(question.part!)
           }, 3000)
         }, 1000)
+        return;
       } else if (nextQuestion >= questions.length) {
         setTimeout(() => {
           showMacroFeedback('test', undefined, currentTest)
@@ -257,10 +267,11 @@ Ready for what's next? 🚀✨`
             showTestCompletionOptions('dominant')
           }, 3000)
         }, 1000)
+        return;
       } else {
         setCurrentQuestion(nextQuestion)
         setTimeout(() => {
-          showNextQuestion()
+          showNextQuestion(nextQuestion)
         }, 800)
       }
     } else {
@@ -271,10 +282,11 @@ Ready for what's next? 🚀✨`
             showTestCompletionOptions(currentTest)
           }, 3000)
         }, 1000)
+        return;
       } else {
         setCurrentQuestion(nextQuestion)
         setTimeout(() => {
-          showNextQuestion()
+          showNextQuestion(nextQuestion)
         }, 800)
       }
     }
@@ -406,143 +418,199 @@ What would you like to do next?`
     return <PartFeedback part={completedPart!} responses={responses} onContinue={() => continueToNextPart(completedPart!)} />
   }
 
-  return (
-    <div className="fixed inset-0 min-h-screen min-w-screen bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 font-sans overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <Sparkles className="absolute top-10 left-10 w-10 h-10 text-purple-200 opacity-40 animate-pulse" />
-        <Star className="absolute bottom-20 right-20 w-8 h-8 text-pink-200 opacity-30 animate-bounce" />
-        <Brain className="absolute top-1/2 left-1/4 w-16 h-16 text-indigo-200 opacity-20 animate-float" />
-        <Users className="absolute bottom-1/3 right-1/3 w-12 h-12 text-blue-200 opacity-20 animate-float" />
-        <Lightbulb className="absolute top-1/4 right-1/5 w-10 h-10 text-yellow-200 opacity-30 animate-pulse" />
-        <Zap className="absolute bottom-10 left-1/2 w-8 h-8 text-orange-200 opacity-20 animate-bounce" />
-      </div>
+  // Animated bot avatar SVG
+  const AnimatedBotAvatar = () => (
+    <div className="bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full p-1 shadow-lg animate-float-slow">
+      <Bot className="w-6 h-6 text-white animate-pulse" />
+    </div>
+  )
 
-      {/* Header */}
-      <div className="bg-white/80 shadow-sm border-b backdrop-blur-md z-10 w-full">
-        <div className="w-full flex items-center justify-between px-8 py-3">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={onBack} className="text-gray-600">
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back
-            </Button>
-            <div className="flex items-center space-x-2">
-              {React.createElement(getTestIcon(currentTest), { className: "w-6 h-6 text-indigo-600" })}
-              <h1 className="text-lg font-bold text-gray-900">{getTestTitle(currentTest)}</h1>
+  // Animated user avatar
+  const AnimatedUserAvatar = ({ src, fallback }: { src?: string, fallback: string }) => (
+    <div className="bg-gradient-to-br from-pink-500 to-indigo-500 rounded-full p-1 shadow-lg animate-bounce-in">
+      <Avatar size="sm">
+        {src ? <AvatarImage src={src} alt="You" /> : <AvatarFallback>{fallback}</AvatarFallback>}
+      </Avatar>
+    </div>
+  )
+
+  return (
+    <div className="fixed inset-0 min-h-screen min-w-screen bg-white font-sans overflow-hidden">
+      {/* Animated Math/Science Background Elements */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <Calculator className="absolute top-24 left-1/3 w-10 h-10 text-blue-700 opacity-60 animate-float-slow" />
+        <Atom className="absolute bottom-32 right-1/4 w-12 h-12 text-green-700 opacity-60 animate-spin-slow" />
+        <BarChart3 className="absolute top-1/4 right-1/3 w-10 h-10 text-indigo-800 opacity-60 animate-bounce" />
+        <Palette className="absolute bottom-10 left-1/4 w-10 h-10 text-pink-700 opacity-50 animate-float" />
+        <Eye className="absolute top-1/3 left-1/5 w-8 h-8 text-yellow-700 opacity-50 animate-pulse" />
+        <Sparkles className="absolute top-10 left-10 w-10 h-10 text-purple-700 opacity-60 animate-pulse" />
+        <Star className="absolute bottom-20 right-20 w-8 h-8 text-pink-800 opacity-50 animate-bounce" />
+        <Brain className="absolute top-1/2 left-1/4 w-16 h-16 text-indigo-800 opacity-40 animate-float" />
+        <Users className="absolute bottom-1/3 right-1/3 w-12 h-12 text-blue-800 opacity-40 animate-float" />
+        <Lightbulb className="absolute top-1/4 right-1/5 w-10 h-10 text-yellow-700 opacity-50 animate-pulse" />
+        <Zap className="absolute bottom-10 left-1/2 w-8 h-8 text-orange-700 opacity-50 animate-bounce" />
+      </div>
+      {/* Main test window with 1cm margin */}
+      <div className="relative z-10 m-[1cm]">
+        {/* Header */}
+        <div className="bg-white/80 shadow-sm border-b backdrop-blur-md z-10 w-full">
+          <div className="w-full flex items-center justify-between px-8 py-3">
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" onClick={onBack} className="text-gray-600">
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Back
+              </Button>
+              <div className="flex items-center space-x-2">
+                {React.createElement(getTestIcon(currentTest), { className: "w-6 h-6 text-indigo-600" })}
+                <h1 className="text-lg font-bold text-gray-900">{getTestTitle(currentTest)}</h1>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <div className="text-xs text-gray-600">Question {getCurrentQuestionNumber()} of {getTotalQuestions()}</div>
-              <Progress value={getCurrentProgress()} className="w-24" />
+            <div className="flex items-center space-x-4">
+              <div className="text-right">
+                <div className="text-xs text-gray-600">Question {getCurrentQuestionNumber()} of {getTotalQuestions()}</div>
+                <Progress value={getCurrentProgress()} className="w-24" />
+              </div>
+              <Button variant="ghost" onClick={() => setShowQuitConfirm(true)} className="text-red-600">
+                <LogOut className="w-5 h-5" />
+              </Button>
             </div>
-            <Button variant="ghost" onClick={() => setShowQuitConfirm(true)} className="text-red-600">
-              <LogOut className="w-5 h-5" />
-            </Button>
           </div>
         </div>
-      </div>
 
-      {/* Chat Interface */}
-      <div className="flex flex-col h-[calc(100vh-56px)] w-full z-10">
-        <div className="w-full flex-1 flex flex-col justify-end">
-          <div className="flex-1 overflow-y-auto px-0 py-6 space-y-4" ref={scrollAreaRef} style={{height: 'calc(100vh - 120px)', minHeight: 0, maxHeight: 'calc(100vh - 120px)'}}>
-            {chatMessages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${message.type === 'user' ? 'justify-end items-end' : 'justify-start items-start'} w-full`}
-              >
-                <div
-                  className={`max-w-[80%] ${
-                    message.type === 'user'
-                      ? 'bg-indigo-600 text-white ml-auto mr-0'
-                      : 'bg-white/90 text-gray-900 ml-0 mr-auto'
-                  } rounded-2xl px-5 py-3 shadow-md font-medium text-base break-words`}
-                >
-                  {message.type === 'bot' || message.type === 'macroFeedback' ? (
-                    <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: message.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
-                  ) : message.type === 'user' ? (
-                    <div>{message.content}</div>
-                  ) : message.type === 'options' ? (
-                    <div>
-                      <div className="mb-3 font-semibold text-indigo-700">{message.content}</div>
-                      <div className="space-y-2">
-                        {message.options?.map((option) => (
-                          <Button
-                            key={option.value}
-                            variant="outline"
-                            className="w-full justify-start text-left bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-900"
-                            onClick={() => handleResponse(option.value)}
+        {/* Chat Interface */}
+        <div className="flex flex-col h-[calc(100vh-56px)] w-full z-10">
+          <div className="w-full flex-1 flex flex-col justify-end">
+            <div className="flex-1 overflow-y-auto px-0 py-6 space-y-4" ref={scrollAreaRef} style={{height: 'calc(100vh - 120px)', minHeight: 0, maxHeight: 'calc(100vh - 120px)'}}>
+              {chatMessages.map((message, index) => {
+                const isUser = message.type === 'user';
+                const isBot = message.type === 'bot' || message.type === 'macroFeedback';
+                return (
+                  <div
+                    key={index}
+                    className={`flex w-full ${isUser ? 'justify-end items-end' : 'justify-start items-start'}`}
+                  >
+                    {/* Bot message: avatar left, bubble right */}
+                    {isBot && (
+                      <>
+                        <div className="flex items-end gap-2">
+                          <AnimatedBotAvatar />
+                          <div
+                            className="relative group"
                           >
-                            {option.label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : message.type === 'dynamicOptions' ? (
-                    <div>
-                      <div className="mb-3 font-semibold text-indigo-700">{message.content}</div>
-                      <div className="space-y-2">
-                        {message.dynamicOptions?.map((option, idx) => (
-                          <Button
-                            key={idx}
-                            variant="outline"
-                            className="w-full justify-start text-left bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-900"
-                            onClick={() => handleResponse(option)}
+                            <div
+                              className="bg-gradient-to-br from-white via-indigo-50 to-purple-100 text-gray-900 rounded-2xl rounded-tl-none px-5 py-3 shadow-lg font-medium text-base break-words max-w-[80%] border border-indigo-100 group-hover:scale-[1.03] group-hover:shadow-2xl transition-all duration-200"
+                            >
+                              <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: message.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                            </div>
+                            {/* Bubble tail */}
+                            <div className="absolute left-[-10px] bottom-2 w-4 h-4 bg-white/80 rounded-bl-2xl rotate-45 border-l border-b border-indigo-100" />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {/* User message: bubble left, avatar right */}
+                    {isUser && (
+                      <div className="flex items-end gap-2 justify-end w-full">
+                        <div className="relative group">
+                          <div
+                            className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white rounded-2xl rounded-br-none px-5 py-3 shadow-lg font-medium text-base break-words max-w-[80%] border border-indigo-300 group-hover:scale-[1.03] group-hover:shadow-2xl transition-all duration-200 ml-auto"
                           >
-                            {option}
-                          </Button>
-                        ))}
+                            <div>{message.content}</div>
+                          </div>
+                          {/* Bubble tail */}
+                          <div className="absolute right-[-10px] bottom-2 w-4 h-4 bg-indigo-400 rounded-br-2xl rotate-45 border-r border-b border-indigo-300" />
+                        </div>
+                        <AnimatedUserAvatar src={user?.avatarUrl} fallback={user?.name?.[0] || 'U'} />
                       </div>
-                    </div>
-                  ) : message.type === 'testActions' ? (
-                    <div>
-                      <div className="mb-3 font-semibold text-indigo-700">{message.content}</div>
-                      <div className="flex flex-wrap gap-2">
-                        {message.completedPart ? (
+                    )}
+                    {/* Options, dynamicOptions, testActions remain unchanged, but can be styled similarly if desired */}
+                    {!isUser && !isBot && (
+                      <div className="max-w-[80%] bg-white/90 text-gray-900 ml-0 mr-auto rounded-2xl px-5 py-3 shadow-md font-medium text-base break-words border border-indigo-100">
+                        {message.type === 'options' && (
                           <>
-                            <Button onClick={() => continueToNextPart(message.completedPart!)}>
-                              Continue to Next Part
-                            </Button>
-                            <Button variant="outline" onClick={() => setPhase('dominantReport')}>
-                              View Report
-                            </Button>
+                            <div className="mb-3 font-semibold text-indigo-700">{message.content}</div>
+                            <div className="space-y-2">
+                              {message.options?.map((option) => (
+                                <Button
+                                  key={option.value}
+                                  variant="outline"
+                                  className="w-full justify-start text-left bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-900"
+                                  onClick={() => handleResponse(option.value)}
+                                >
+                                  {option.label}
+                                </Button>
+                              ))}
+                            </div>
                           </>
-                        ) : message.completedTest === 'dominant' ? (
+                        )}
+                        {message.type === 'dynamicOptions' && (
                           <>
-                            <Button onClick={() => continueFromReport('personality')}>
-                              Start Personality Test
-                            </Button>
-                            <Button variant="outline" onClick={() => setPhase('dominantReport')}>
-                              View Report
-                            </Button>
+                            <div className="mb-3 font-semibold text-indigo-700">{message.content}</div>
+                            <div className="space-y-2">
+                              {message.dynamicOptions?.map((option, idx) => (
+                                <Button
+                                  key={idx}
+                                  variant="outline"
+                                  className="w-full justify-start text-left bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-900"
+                                  onClick={() => handleResponse(option)}
+                                >
+                                  {option}
+                                </Button>
+                              ))}
+                            </div>
                           </>
-                        ) : message.completedTest === 'personality' ? (
+                        )}
+                        {message.type === 'testActions' && (
                           <>
-                            <Button onClick={() => continueFromReport('learning')}>
-                              Start Learning Style Test
-                            </Button>
-                            <Button variant="outline" onClick={() => setPhase('personalityReport')}>
-                              View Report
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button onClick={() => setPhase('finalReport')}>
-                              View Final Results
-                            </Button>
-                            <Button variant="outline" onClick={() => setPhase('learningReport')}>
-                              View Learning Report
-                            </Button>
+                            <div className="mb-3 font-semibold text-indigo-700">{message.content}</div>
+                            <div className="flex flex-wrap gap-2">
+                              {message.completedPart ? (
+                                <>
+                                  <Button onClick={() => continueToNextPart(message.completedPart!)}>
+                                    Continue to Next Part
+                                  </Button>
+                                  <Button variant="outline" onClick={() => setPhase('dominantReport')}>
+                                    View Report
+                                  </Button>
+                                </>
+                              ) : message.completedTest === 'dominant' ? (
+                                <>
+                                  <Button onClick={() => continueFromReport('personality')}>
+                                    Start Personality Test
+                                  </Button>
+                                  <Button variant="outline" onClick={() => setPhase('dominantReport')}>
+                                    View Report
+                                  </Button>
+                                </>
+                              ) : message.completedTest === 'personality' ? (
+                                <>
+                                  <Button onClick={() => continueFromReport('learning')}>
+                                    Start Learning Style Test
+                                  </Button>
+                                  <Button variant="outline" onClick={() => setPhase('personalityReport')}>
+                                    View Report
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button onClick={() => setPhase('finalReport')}>
+                                    View Final Results
+                                  </Button>
+                                  <Button variant="outline" onClick={() => setPhase('learningReport')}>
+                                    View Learning Report
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           </>
                         )}
                       </div>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-            <div ref={chatEndRef} />
+                    )}
+                  </div>
+                );
+              })}
+              <div ref={chatEndRef} />
+            </div>
           </div>
         </div>
       </div>
