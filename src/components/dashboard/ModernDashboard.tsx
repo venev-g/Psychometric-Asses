@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/Avatar'
+import { Avatar, AvatarFallback, AvatarImage, EnhancedAvatar } from '@/components/ui/Avatar'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { 
@@ -30,6 +30,8 @@ import {
 import { StudentProfile } from './StudentProfile'
 import { AssessmentGrid } from './AssessmentCards'
 import { StatisticsGrid } from './StatisticsCards'
+import { Dialog, DialogTrigger, DialogContent, DialogTitle } from '@/components/ui/Dialog'
+import { MentorForm } from './MentorForm'
 
 interface ModernDashboardProps {
   user: any
@@ -47,6 +49,7 @@ export function ModernDashboard({ user }: ModernDashboardProps) {
     lastAssessment: null,
     achievements: 0
   })
+  const [mentorDialogOpen, setMentorDialogOpen] = useState(false)
 
   useEffect(() => {
     loadDashboardData()
@@ -193,9 +196,9 @@ export function ModernDashboard({ user }: ModernDashboardProps) {
         </motion.div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
           {/* Left Column - Assessments */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6 h-full">
             {/* In Progress Section */}
             {inProgressSessions.length > 0 && (
               <motion.div
@@ -265,7 +268,7 @@ export function ModernDashboard({ user }: ModernDashboardProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Card>
+              <Card className="h-full flex flex-col">
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <BookOpen className="w-5 h-5 mr-2 text-green-600" />
@@ -273,7 +276,7 @@ export function ModernDashboard({ user }: ModernDashboardProps) {
                   </CardTitle>
                   <p className="text-gray-600">Choose from our comprehensive psychometric tests</p>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="h-full flex-1 flex flex-col">
                   <AssessmentGrid 
                     assessments={configurations}
                     onStartAssessment={startNewAssessment}
@@ -285,7 +288,7 @@ export function ModernDashboard({ user }: ModernDashboardProps) {
           </div>
 
           {/* Right Column - Profile & Quick Actions */}
-          <div className="space-y-6">
+          <div className="space-y-6 h-full">
             {/* Quick Actions */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -372,15 +375,15 @@ export function ModernDashboard({ user }: ModernDashboardProps) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.6 }}
             >
-              <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+              <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200 h-full flex flex-col">
                 <CardHeader>
                   <CardTitle className="flex items-center text-yellow-900">
                     <Trophy className="w-5 h-5 mr-2" />
                     Achievements
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-center">
+                <CardContent className="h-full flex-1 flex flex-col">
+                  <div className="text-center flex flex-col flex-1 justify-center">
                     <div className="text-3xl font-bold text-yellow-600 mb-2">{userStats.achievements}</div>
                     <p className="text-sm text-yellow-700 mb-3">Achievements Unlocked</p>
                     <Button size="sm" variant="outline" className="bg-white hover:bg-yellow-100">
@@ -402,6 +405,35 @@ export function ModernDashboard({ user }: ModernDashboardProps) {
           <StudentProfile user={user} stats={userStats} />
         </motion.div>
       </div>
+      {/* Mentor Avatar Floating Button with Dialog */}
+      <Dialog open={mentorDialogOpen} onOpenChange={setMentorDialogOpen}>
+        <DialogTrigger asChild>
+          <div
+            className="fixed bottom-8 right-8 z-50 group flex flex-col items-end"
+            style={{ cursor: 'pointer' }}
+            onClick={() => setMentorDialogOpen(true)}
+          >
+            {/* Chat bubble - only visible on hover */}
+            <div className="mb-2 mr-2 px-4 py-2 rounded-2xl bg-white text-gray-900 shadow-lg text-base font-semibold relative opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                 style={{ maxWidth: '180px' }}>
+              Ask your mentor!
+              <span className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-4 h-4 bg-white rotate-45 shadow-md"></span>
+            </div>
+            <img
+              src="/images/mentor.png"
+              alt="Mentor"
+              className="mentor-avatar shadow-2xl transition-transform group-hover:scale-105"
+              style={{ display: 'block' }}
+            />
+          </div>
+        </DialogTrigger>
+        <DialogContent fullscreen className="bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+          <DialogTitle asChild>
+            <h2 className="sr-only">Mentor Request</h2>
+          </DialogTitle>
+          <MentorForm onClose={() => setMentorDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 
