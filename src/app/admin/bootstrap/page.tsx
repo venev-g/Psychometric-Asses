@@ -89,7 +89,7 @@ export default function AdminBootstrapPage() {
           <CardHeader>
             <CardTitle>System Status Check</CardTitle>
             <CardDescription>
-              Test the current system status and see what's working
+              Test the current system status and see what&apos;s working
             </CardDescription>
           </CardHeader>
           <CardContent>
