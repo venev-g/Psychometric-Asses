@@ -249,7 +249,7 @@ export default function DemoDashboardPage() {
                         <p className="text-gray-600">{config.description}</p>
                       </div>
                       <Badge variant="outline" className="ml-4">
-                        {config.test_sequences.length} tests
+                        {config.test_sequences?.length || 0} tests
                       </Badge>
                     </div>
                   </CardHeader>

@@ -78,7 +78,6 @@ export default function ProfileSettingsPage() {
         .from('user_profiles')
         .upsert({
           id: user.id,
-          email: user.email,
           full_name: formData.full_name,
           updated_at: new Date().toISOString()
         })

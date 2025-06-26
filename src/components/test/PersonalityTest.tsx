@@ -73,9 +73,9 @@ Let's start with your Dominant Intelligence assessment. Ready to dive in?`
 
   const getCurrentQuestions = () => {
     switch (currentTest) {
-      case 'dominant': return questions.dominantIntelligence
-      case 'personality': return questions.personalityPattern
-      case 'learning': return questions.learningStyle
+      case 'dominant': return questions.dominantIntelligence || []
+      case 'personality': return questions.personalityPattern || []
+      case 'learning': return questions.learningStyle || []
     }
   }
 
@@ -122,6 +122,15 @@ Let's start with your Dominant Intelligence assessment. Ready to dive in?`
   // Show the next question and options (at given index)
   const showNextQuestion = (index: number) => {
     const questions = getCurrentQuestions()
+    
+    if (!questions || questions.length === 0) {
+      setChatMessages(prev => [...prev, {
+        type: 'bot',
+        content: 'Sorry, there seems to be an issue loading the questions. Please refresh the page and try again.'
+      }])
+      return
+    }
+    
     const nextQ = questions[index]
     if (!nextQ) return
 

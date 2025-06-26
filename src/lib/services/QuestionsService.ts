@@ -53,41 +53,47 @@ export class QuestionsService {
 
   async getQuestionsByTestType(testTypeSlug: string): Promise<DatabaseQuestion[]> {
     console.log(`Fetching questions for test type: ${testTypeSlug}`)
-    // First get the test type ID - use array instead of single to avoid errors
-    const { data: testTypes, error: testTypeError } = await this.supabase
-      .from('test_types')
-      .select('id, name')
-      .eq('slug', testTypeSlug)
-      .eq('is_active', true)
-
-    if (testTypeError) {
-      console.error(`Error fetching test type for slug ${testTypeSlug}:`, testTypeError)
-      throw testTypeError
-    }
     
-    if (!testTypes || testTypes.length === 0) {
-      console.error(`Test type with slug '${testTypeSlug}' not found`)
-      throw new Error(`Test type with slug '${testTypeSlug}' not found`)
+    try {
+      // First get the test type ID - use array instead of single to avoid errors
+      const { data: testTypes, error: testTypeError } = await this.supabase
+        .from('test_types')
+        .select('id, name')
+        .eq('slug', testTypeSlug)
+        .eq('is_active', true)
+
+      if (testTypeError) {
+        console.error(`Error fetching test type for slug ${testTypeSlug}:`, testTypeError)
+        throw testTypeError
+      }
+      
+      if (!testTypes || testTypes.length === 0) {
+        console.error(`Test type with slug '${testTypeSlug}' not found`)
+        return [] // Return empty array instead of throwing error
+      }
+
+      const testType = testTypes[0]
+      console.log(`Found test type: ${testType.name} (${testType.id})`)
+
+      // Then get questions for this test type - include questions with is_active=true OR is_active=null
+      const { data, error } = await this.supabase
+        .from('questions')
+        .select('*')
+        .eq('test_type_id', testType.id)
+        .or('is_active.is.null,is_active.eq.true')
+        .order('order_index')
+
+      if (error) {
+        console.error(`Error fetching questions for test type ${testType.name}:`, error)
+        throw error
+      }
+      
+      console.log(`Retrieved ${data?.length || 0} questions for ${testType.name}`)
+      return data || []
+    } catch (error) {
+      console.error(`[ Server ] Error fetching test type for slug ${testTypeSlug}:`, error)
+      return [] // Return empty array on error instead of throwing
     }
-
-    const testType = testTypes[0]
-    console.log(`Found test type: ${testType.name} (${testType.id})`)
-
-    // Then get questions for this test type - include questions with is_active=true OR is_active=null
-    const { data, error } = await this.supabase
-      .from('questions')
-      .select('*')
-      .eq('test_type_id', testType.id)
-      .or('is_active.is.null,is_active.eq.true')
-      .order('order_index')
-
-    if (error) {
-      console.error(`Error fetching questions for test type ${testType.name}:`, error)
-      throw error
-    }
-    
-    console.log(`Retrieved ${data?.length || 0} questions for ${testType.name}`)
-    return data || []
   }
 
   async getAllQuestionsForAssessment(): Promise<{
@@ -121,8 +127,13 @@ export class QuestionsService {
       
       return result
     } catch (error) {
-      console.error('Failed to fetch questions from database:', error)
-      throw error
+      console.error('[ Server ] Failed to fetch questions from database:', error)
+      // Return empty arrays instead of throwing to prevent page crashes
+      return {
+        dominantIntelligence: [],
+        personalityPattern: [],
+        learningStyle: []
+      }
     }
   }
 

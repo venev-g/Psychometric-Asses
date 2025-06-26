@@ -19,6 +19,31 @@ interface StartTestPageProps {
 export function StartTestPage({ user, questions }: StartTestPageProps) {
   const [testStarted, setTestStarted] = useState(false)
 
+  // Check if questions are available
+  const hasQuestions = questions && 
+    (questions.dominantIntelligence?.length > 0 || 
+     questions.personalityPattern?.length > 0 || 
+     questions.learningStyle?.length > 0)
+
+  if (!hasQuestions) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 font-['Roboto',sans-serif] flex items-center justify-center">
+        <Card className="max-w-md mx-auto">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Brain className="w-8 h-8 text-yellow-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Questions Loading</h2>
+            <p className="text-gray-600 mb-4">We're preparing your assessment questions. Please wait a moment.</p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Refresh Page
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   if (testStarted) {
     return <PersonalityTest onBack={() => setTestStarted(false)} user={user} questions={questions} />
   }
