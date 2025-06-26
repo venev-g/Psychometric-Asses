@@ -36,9 +36,25 @@ export async function GET(request: NextRequest) {
     
     const configurations = await configService.getAllConfigurations()
     
+    // If no configurations found, use temporary ones
+    if (!configurations || configurations.length === 0) {
+      console.log('No configurations found in database, using temporary fallback')
+      
+      // Fetch temporary configurations
+      const tempResponse = await fetch(new URL('/api/admin/temp-configs', request.url))
+      const tempData = await tempResponse.json()
+      
+      return NextResponse.json({ 
+        success: true, 
+        configurations: tempData.configurations || [],
+        source: 'temporary'
+      })
+    }
+    
     return NextResponse.json({ 
       success: true, 
-      configurations 
+      configurations,
+      source: 'database'
     })
   } catch (error: any) {
     console.error('Get configurations error:', error)

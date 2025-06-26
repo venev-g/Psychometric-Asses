@@ -33,6 +33,9 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <Link href="/summary">
+                <Button variant="ghost" className="hover:bg-purple-50 text-purple-700">System Summary</Button>
+              </Link>
               <Link href="/auth/login">
                 <Button variant="ghost" className="hover:bg-blue-50 text-blue-700">Sign In</Button>
               </Link>
@@ -67,7 +70,7 @@ export default async function HomePage() {
               Unlock your unique intelligence patterns, personality traits, and optimal learning style through our comprehensive AI-powered assessment suite.
             </p>
             <div className="mt-8 max-w-md mx-auto sm:flex sm:justify-center md:mt-10 gap-4">
-              <Link href="/assessment">
+              <Link href="/demo/assessment">
                 <Button size="lg" className="w-full sm:w-auto px-8 py-6 text-lg shadow-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transform transition-all duration-300 hover:-translate-y-1">
                   Try Demo
                 </Button>

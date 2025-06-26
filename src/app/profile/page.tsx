@@ -1,13 +1,20 @@
-import React from 'react'
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Label } from '@/components/ui/Label'
+import { Alert, AlertDescription } from '@/components/ui/Alert'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/RadioGroup'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
-import { redirect } from 'next/navigation'
-import { User, Award, CheckCircle, Star, Edit2 } from 'lucide-react'
-import Link from 'next/link'
+import { Calendar, User, Briefcase, GraduationCap, Target, Edit2, Save, X } from 'lucide-react'
 
-export default async function ProfilePage() {
+export default function ProfilePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')

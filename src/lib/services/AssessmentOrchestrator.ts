@@ -17,8 +17,29 @@ export class AssessmentOrchestrator {
   }
 
   async startAssessment(userId: string, configId: string): Promise<AssessmentSession> {
-    // Get configuration to determine total tests
-    const config = await this.configService.getConfigurationWithSequence(configId)
+    let config: any
+    let totalTests = 0
+    
+    try {
+      // Try to get configuration from database first
+      config = await this.configService.getConfigurationWithSequence(configId)
+      totalTests = config.test_sequences?.length || 0
+    } catch (error) {
+      // If not found in database, it might be a temporary configuration
+      // For now, create a default session with 3 tests for temp configs
+      if (configId.startsWith('temp-')) {
+        config = {
+          id: configId,
+          name: configId === 'temp-complete-profile' ? 'Complete Psychometric Profile' : 'Quick Personality Check',
+          test_sequences: configId === 'temp-complete-profile' ? 
+            [{ sequence_order: 0 }, { sequence_order: 1 }, { sequence_order: 2 }] :
+            [{ sequence_order: 0 }, { sequence_order: 1 }]
+        }
+        totalTests = config.test_sequences.length
+      } else {
+        throw error
+      }
+    }
     
     const { data, error } = await this.supabase
       .from('assessment_sessions')
@@ -26,10 +47,11 @@ export class AssessmentOrchestrator {
         user_id: userId,
         configuration_id: configId,
         status: 'started',
-        total_tests: config.test_sequences?.length || 0,
+        total_tests: totalTests,
         metadata: {
           started_timestamp: new Date().toISOString(),
-          configuration_name: config.name
+          configuration_name: config.name,
+          is_temporary: configId.startsWith('temp-')
         }
       })
       .select()
@@ -52,9 +74,22 @@ export class AssessmentOrchestrator {
 
   async getCurrentTest(sessionId: string): Promise<any> {
     const session = await this.getAssessmentSession(sessionId)
-    const config = await this.configService.getConfigurationWithSequence(session.configuration_id || '')
+    let config: any
     
-    if (!config.test_sequences || !session.current_test_index) {
+    try {
+      // Try to get configuration from database first
+      config = await this.configService.getConfigurationWithSequence(session.configuration_id || '')
+    } catch (error) {
+      // If not found in database, it might be a temporary configuration
+      if (session.configuration_id?.startsWith('temp-')) {
+        // Handle temporary configurations
+        config = await this.getTempConfiguration(session.configuration_id)
+      } else {
+        throw error
+      }
+    }
+    
+    if (!config.test_sequences || session.current_test_index === null || session.current_test_index === undefined) {
       throw new Error('No test sequences found or invalid session state')
     }
     
@@ -63,7 +98,14 @@ export class AssessmentOrchestrator {
       throw new Error('Current test not found')
     }
     
-    const testType = currentTest.test_types
+    // For temp configs, we need to get test type by slug
+    let testType: any
+    if (session.configuration_id?.startsWith('temp-')) {
+      testType = await this.getTestTypeForTempSequence(currentTest)
+    } else {
+      testType = currentTest.test_types
+    }
+    
     const questions = await this.getQuestionsForTest(testType.id)
     
     return {
@@ -315,6 +357,51 @@ export class AssessmentOrchestrator {
       .eq('session_id', sessionId)
       .eq('questions.test_type_id', testTypeId)
 
+    if (error) throw error
+    return data
+  }
+
+  private async getTempConfiguration(configId: string): Promise<any> {
+    // Hardcoded temp configurations for now
+    // In production, these could be stored in a different table or service
+    const tempConfigurations: Record<string, any> = {
+      'temp-complete-profile': {
+        id: 'temp-complete-profile',
+        name: 'Complete Psychometric Profile',
+        test_sequences: [
+          { test_type_id: 'dominant-intelligence', sequence_order: 0, is_required: true },
+          { test_type_id: 'personality-pattern', sequence_order: 1, is_required: true },
+          { test_type_id: 'vark', sequence_order: 2, is_required: true }
+        ]
+      },
+      'temp-quick-check': {
+        id: 'temp-quick-check',
+        name: 'Quick Personality Check',
+        test_sequences: [
+          { test_type_id: 'personality-pattern', sequence_order: 0, is_required: true },
+          { test_type_id: 'vark', sequence_order: 1, is_required: true }
+        ]
+      }
+    }
+    
+    const config = tempConfigurations[configId]
+    if (!config) {
+      throw new Error(`Temporary configuration ${configId} not found`)
+    }
+    
+    return config
+  }
+
+  private async getTestTypeForTempSequence(sequence: any): Promise<any> {
+    // For temp sequences, we need to look up the test type by slug
+    const testTypeSlug = sequence.test_type_id
+    
+    const { data, error } = await this.supabase
+      .from('test_types')
+      .select('*')
+      .eq('slug', testTypeSlug)
+      .single()
+    
     if (error) throw error
     return data
   }
