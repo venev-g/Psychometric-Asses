@@ -71,3 +71,116 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+# Psychometric Assessment Platform
+
+A comprehensive platform for conducting psychometric assessments with AI-powered mentoring capabilities.
+
+## Features
+
+- **Assessment Types**: Personality, Intelligence, and VARK Learning Style assessments
+- **AI Mentor Integration**: Powered by Langflow for personalized learning guidance
+- **Real-time Analytics**: Comprehensive dashboard with detailed insights
+- **Responsive Design**: Modern UI that works across all devices
+- **Admin Panel**: Complete management interface for assessments and users
+
+## AI Mentor Integration
+
+The platform includes an AI-powered mentor system that provides personalized learning guidance. The mentor is powered by Langflow and can:
+
+- Create customized learning modules based on user preferences
+- Provide real-time chat support during learning sessions
+- Adapt content based on learning style and cognitive profile
+- Generate visual concept maps and problem-solving strategies
+
+### Setup for AI Mentor
+
+1. **Install Langflow**: Follow the [Langflow installation guide](https://docs.langflow.org/)
+2. **Configure API**: Set up your Langflow flow and note the API endpoint
+3. **Environment Variables**: Create a `.env.local` file with:
+   ```bash
+   NEXT_PUBLIC_LANGFLOW_API_URL=http://127.0.0.1:7860/api/v1/run/YOUR_FLOW_ID
+   ```
+
+### Using the AI Mentor
+
+1. Navigate to the dashboard
+2. Click on "Request Mentor" 
+3. Fill out the learning request form with:
+   - Target topic
+   - Learning objectives
+   - Prerequisites
+   - Curriculum standards
+4. Submit to start a conversation with the AI mentor
+5. Continue the conversation to get personalized guidance
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ 
+- npm or yarn
+- Supabase account
+- Langflow instance (for AI mentor)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd Psychometric-Asses
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up environment variables:
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your configuration
+   ```
+
+4. Set up the database:
+   ```bash
+   npm run db:setup
+   npm run db:seed
+   ```
+
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## API Integration
+
+The platform uses several APIs:
+
+- **Supabase**: Database and authentication
+- **Langflow**: AI mentor functionality
+- **Custom Assessment APIs**: For test administration and scoring
+
+### Langflow API Configuration
+
+The AI mentor uses Langflow's API with the following configuration:
+
+```typescript
+const payload = {
+  input_value: "User message",
+  output_type: "chat",
+  input_type: "chat"
+};
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.

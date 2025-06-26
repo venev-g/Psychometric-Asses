@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
-import { Info, Paperclip, Send } from 'lucide-react';
+import { Info, Paperclip, Send, Loader2, Plus } from 'lucide-react';
+import { LangflowService, Session } from '@/lib/services/LangflowService';
+import { SessionManager } from './SessionManager';
 
 const Tooltip = ({ text }: { text: string }) => (
   <span className="ml-2 text-xs text-gray-500 cursor-pointer group relative">
@@ -23,6 +25,8 @@ const aiAvatar = (
 
 export function MentorForm({ onClose }: { onClose?: () => void }) {
   const [showChat, setShowChat] = useState(false);
+  const [showSessionManager, setShowSessionManager] = useState(true);
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [form, setForm] = useState({
     topic: '',
     objectives: '',
@@ -31,6 +35,8 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
   });
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to latest message
@@ -44,25 +50,84 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Build the prompt for the mentor bot
-    const prompt = `As an AI tutor for an <<INTJ>> <<visual learner>> with:\n- Strengths: logical, spatial\n- Cognitive profile: high working memory, moderate focus\n- Preferred formats: diagrams + journaling\n- Motivation: mastery + recognition\n- Avoid: auditory-heavy explanations>>\n\nBreak "${form.topic}" into 4 micro-modules with:\n1. Visual concept maps\n2. Logical problem-solving\n3. Spatial representations\n4. Mastery-based challenges\n\nInclude:\n- Estimated duration per module (max 12min)\n- Journal prompts for reflection\n- Error-correction pathways\n\nLearning Objectives:\n${form.objectives}\n\nPrerequisite Knowledge:\n${form.prerequisites}\n\nCurriculum Standards:\n${form.standards}`;
-    setMessages([
-      { sender: 'user', text: prompt }
-    ]);
+  const handleSessionSelect = (session: Session) => {
+    setCurrentSession(session);
+    setShowSessionManager(false);
     setShowChat(true);
+    setMessages([]); // Clear messages for new session
   };
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
-    setMessages([...messages, { sender: 'user', text: input }]);
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Always create a new session for mentor requests
+      const newSession = LangflowService.createSession(form.topic);
+      setCurrentSession(newSession);
+      
+      // Build the prompt for the mentor bot
+      const prompt = `Break "${form.topic}" into 4 micro-modules with:
+1. Visual concept maps
+2. Logical problem-solving
+3. Spatial representations
+4. Mastery-based challenges
+
+Learning Objectives:
+${form.objectives}
+
+Prerequisite Knowledge:
+${form.prerequisites}
+
+Curriculum Standards:
+${form.standards}`;
+      
+      setMessages([
+        { sender: 'user', text: prompt }
+      ]);
+      setShowChat(true);
+
+      // Send to Langflow API with the new session ID
+      const aiResponse = await LangflowService.sendMentorRequest(form, newSession.id);
+      setMessages(msgs => [...msgs, { sender: 'ai', text: aiResponse }]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get AI response');
+      console.error('Error in handleSubmit:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    
+    const userMessage = input.trim();
+    setMessages([...messages, { sender: 'user', text: userMessage }]);
     setInput('');
-    // Here you would send the message to the AI and append the AI's response
-    setTimeout(() => {
-      setMessages(msgs => [...msgs, { sender: 'ai', text: 'This is a sample AI mentor response. (Integrate with backend for real answers.)' }]);
-    }, 1000);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Send to Langflow API with session ID
+      const aiResponse = await LangflowService.sendMessage(userMessage, currentSession?.id);
+      console.log('AI Response received:', aiResponse);
+      console.log('AI Response length:', aiResponse.length);
+      console.log('AI Response preview:', aiResponse.substring(0, 200) + '...');
+      
+      setMessages(msgs => [...msgs, { sender: 'ai', text: aiResponse }]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get AI response');
+      console.error('Error in handleSend:', err);
+      // Add error message to chat
+      setMessages(msgs => [...msgs, { 
+        sender: 'ai', 
+        text: 'I apologize, but I encountered an error processing your message. Please try again.' 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -120,66 +185,99 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
         <rect x="28" y="44" width="8" height="10" rx="4" fill="#F59E42" />
         <rect x="30" y="54" width="4" height="6" rx="2" fill="#F59E42" />
       </svg>
+      
       {/* Main UI */}
       <div className={`transition-all duration-700 ease-in-out w-full h-full ${showChat ? 'opacity-0 pointer-events-none scale-95' : 'opacity-100 scale-100'}`} style={{ position: showChat ? 'absolute' : 'relative', zIndex: 10 }}>
         {!showChat && (
-          <form onSubmit={handleSubmit} className="w-full max-w-xl mx-auto shadow-2xl border-0 bg-gradient-to-br from-blue-50 to-purple-100 relative z-10 p-4 sm:p-8">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold text-blue-900 flex items-center gap-2">
-                Mentor Request
-              </CardTitle>
-              <p className="text-gray-600 mt-1">Fill out the details for your learning module. Your AI mentor will help you craft the perfect lesson!</p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Target Topic */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-1 flex items-center">
-                  Target Topic
-                  <Tooltip text="The main topic or concept you want to learn about." />
-                </label>
-                <Input name="topic" value={form.topic} onChange={handleChange} placeholder="e.g. Quantum Entanglement" className="bg-white/80" />
-              </div>
-              {/* Learning Objectives */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-1 flex items-center">
-                  Learning Objectives
-                  <Tooltip text="What do you want to achieve? List objectives, one per line." />
-                </label>
-                <Textarea name="objectives" value={form.objectives} onChange={handleChange} rows={3} placeholder="e.g.\nExplain spooky action at distance\nCalculate entanglement probability" className="bg-white/80" />
-              </div>
-              {/* Prerequisite Knowledge */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-1 flex items-center">
-                  Prerequisite Knowledge
-                  <Tooltip text="What should the learner already know? List prerequisites, one per line." />
-                </label>
-                <Textarea name="prerequisites" value={form.prerequisites} onChange={handleChange} rows={2} placeholder="e.g.\nbasic quantum mechanics\nlinear algebra" className="bg-white/80" />
-              </div>
-              {/* Curriculum Standards */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-1 flex items-center">
-                  Curriculum Standards
-                  <Tooltip text="Any standards or frameworks to align with?" />
-                </label>
-                <Input name="standards" value={form.standards} onChange={handleChange} placeholder="e.g. Next Generation Science Standards HS-PS4-3" className="bg-white/80" />
-              </div>
-              <div className="pt-2 flex justify-end">
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded shadow">
-                  Send to Mentor
-                </Button>
-              </div>
-            </CardContent>
-          </form>
+          <div className="w-full max-w-2xl mx-auto p-4">
+            {/* Mentor Form only, no session sidebar */}
+            <form onSubmit={handleSubmit} className="w-full max-w-xl mx-auto shadow-2xl border-0 bg-gradient-to-br from-blue-50 to-purple-100 relative z-10 p-4 sm:p-8">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold text-blue-900 flex items-center gap-2">
+                  Mentor Request
+                </CardTitle>
+                <p className="text-gray-600 mt-1">Fill out the details for your learning module. Your AI mentor will help you craft the perfect lesson!</p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Target Topic */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-800 mb-1 flex items-center">
+                    Target Topic
+                    <Tooltip text="The main topic or concept you want to learn about." />
+                  </label>
+                  <Input name="topic" value={form.topic} onChange={handleChange} placeholder="e.g. Quantum Entanglement" className="bg-white/80" />
+                </div>
+                {/* Learning Objectives */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-800 mb-1 flex items-center">
+                    Learning Objectives
+                    <Tooltip text="What do you want to achieve? List objectives, one per line." />
+                  </label>
+                  <Textarea name="objectives" value={form.objectives} onChange={handleChange} rows={3} placeholder="e.g.\nExplain spooky action at distance\nCalculate entanglement probability" className="bg-white/80" />
+                </div>
+                {/* Prerequisite Knowledge */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-800 mb-1 flex items-center">
+                    Prerequisite Knowledge
+                    <Tooltip text="What should the learner already know? List prerequisites, one per line." />
+                  </label>
+                  <Textarea name="prerequisites" value={form.prerequisites} onChange={handleChange} rows={2} placeholder="e.g.\nbasic quantum mechanics\nlinear algebra" className="bg-white/80" />
+                </div>
+                {/* Curriculum Standards */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-800 mb-1 flex items-center">
+                    Curriculum Standards
+                    <Tooltip text="Any standards or frameworks to align with?" />
+                  </label>
+                  <Input name="standards" value={form.standards} onChange={handleChange} placeholder="e.g. Next Generation Science Standards HS-PS4-3" className="bg-white/80" />
+                </div>
+                <div className="pt-2 flex justify-end">
+                  <Button 
+                    type="submit" 
+                    disabled={isLoading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Sending to Mentor...
+                      </>
+                    ) : (
+                      'Send to Mentor'
+                    )}
+                  </Button>
+                </div>
+                {error && (
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-700 text-sm">{error}</p>
+                  </div>
+                )}
+              </CardContent>
+            </form>
+          </div>
         )}
       </div>
+      
       {/* Chat UI */}
       {showChat && (
         <div className="absolute inset-0 w-full h-full flex flex-col z-20 transition-all duration-700 ease-in-out opacity-100 scale-100">
           {/* Chat header */}
           <div className="w-full flex items-center justify-between px-4 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 shadow-lg z-30">
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="mr-2 p-2 rounded bg-white/10 hover:bg-white/20 text-white focus:outline-none"
+                onClick={() => setShowSessionManager((v) => !v)}
+                title={showSessionManager ? 'Hide sessions' : 'Show sessions'}
+              >
+                {/* Hamburger icon */}
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><rect y="4" width="24" height="2" rx="1" fill="currentColor"/><rect y="11" width="24" height="2" rx="1" fill="currentColor"/><rect y="18" width="24" height="2" rx="1" fill="currentColor"/></svg>
+              </button>
               <img src="/images/mentor2.png" alt="AI Mentor" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-purple-400 shadow-md bg-white object-cover" />
               <span className="text-white text-lg sm:text-2xl font-bold tracking-wide drop-shadow">AI Mentor</span>
+              {currentSession && (
+                <span className="text-white/80 text-sm">• {currentSession.name}</span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <span className="text-white/70 text-xs sm:text-sm font-medium">Advanced Learning Assistant</span>
@@ -192,62 +290,111 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
               </button>
             </div>
           </div>
-          {/* Chat messages */}
-          <div className="flex-1 overflow-y-auto px-2 sm:px-4 py-4 sm:py-8 flex flex-col gap-4 sm:gap-6 max-h-[calc(100vh-120px)] min-h-0 pb-40" style={{ minHeight: 0 }}>
-            {messages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} items-end w-full`}>
-                {msg.sender === 'ai' && (
-                  <div className="mr-2 sm:mr-3">{aiAvatar}</div>
-                )}
-                <div className={`relative max-w-[90vw] sm:max-w-xl px-4 sm:px-6 py-3 sm:py-4 rounded-3xl shadow-xl text-base font-medium transition-all
-                  ${msg.sender === 'user'
-                    ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-br-2xl rounded-tr-3xl animate-fade-in-right'
-                    : 'bg-gradient-to-br from-purple-200 to-pink-200 text-gray-900 rounded-bl-2xl rounded-tl-3xl animate-fade-in-left'}
-                `}>
-                  {msg.text}
-                </div>
-                {msg.sender === 'user' && (
-                  <div className="ml-2 sm:ml-3">{userAvatar}</div>
-                )}
+          
+          {/* Chat content with session manager */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Session Manager Sidebar (only in chat) */}
+            {showSessionManager && (
+              <div className="w-80 border-r border-gray-200 bg-white p-4 overflow-y-auto transition-all duration-300">
+                <SessionManager 
+                  onSessionSelect={handleSessionSelect}
+                  currentSessionId={currentSession?.id}
+                />
               </div>
-            ))}
-            <div ref={chatEndRef} />
-          </div>
-          {/* Chat input */}
-          <div className="w-full flex justify-center z-40 fixed bottom-0 left-0 pointer-events-none">
-            <form onSubmit={handleSend} className="w-full max-w-3xl flex flex-row items-end gap-3 bg-white/95 rounded-2xl shadow-2xl px-4 py-3 mx-auto border border-gray-200 pointer-events-auto">
-              {/* Attachment button (future) */}
-              <button type="button" disabled className="p-2 rounded-full text-gray-400 hover:bg-gray-100 transition" title="Attach file (coming soon)">
-                <Paperclip className="w-5 h-5" />
-              </button>
-              {/* Multiline input */}
-              <textarea
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                placeholder="Type your message..."
-                rows={1}
-                maxLength={1000}
-                className="flex-1 resize-none bg-white rounded-xl px-5 py-4 text-lg sm:text-xl shadow-none border border-gray-200 focus:ring-2 focus:ring-blue-400 min-h-[48px] max-h-40 text-left transition placeholder-gray-400"
-                style={{ minHeight: '48px', maxHeight: '160px', overflowY: 'auto' }}
-                onInput={e => {
-                  const target = e.target as HTMLTextAreaElement;
-                  target.style.height = '48px';
-                  target.style.height = Math.min(target.scrollHeight, 160) + 'px';
-                }}
-              />
-              {/* Send button */}
-              <button
-                type="submit"
-                className="p-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!input.trim()}
-                title="Send"
-              >
-                <Send className="w-6 h-6" />
-              </button>
-            </form>
+            )}
+            
+            {/* Chat messages */}
+            <div className="flex-1 flex flex-col">
+              <div className="flex-1 overflow-y-auto px-2 sm:px-4 py-4 sm:py-8 flex flex-col gap-4 sm:gap-6 max-h-[calc(100vh-120px)] min-h-0 pb-40" style={{ minHeight: 0 }}>
+                {messages.map((msg, idx) => (
+                  <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} items-end w-full`}>
+                    {msg.sender === 'ai' && (
+                      <div className="mr-2 sm:mr-3">{aiAvatar}</div>
+                    )}
+                    <div className={`relative max-w-full overflow-x-auto px-4 sm:px-6 py-3 sm:py-4 rounded-3xl shadow-xl text-base font-medium transition-all whitespace-pre-wrap break-words
+                      ${msg.sender === 'user'
+                        ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-br-2xl rounded-tr-3xl animate-fade-in-right'
+                        : 'bg-gradient-to-br from-purple-200 to-pink-200 text-gray-900 rounded-bl-2xl rounded-tl-3xl animate-fade-in-left'}
+                    `}>
+                      {msg.text}
+                      {msg.sender === 'ai' && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs text-gray-500">Response length: {msg.text.length} characters</span>
+                          <button
+                            className="text-xs text-blue-600 underline ml-2"
+                            onClick={() => {
+                              navigator.clipboard.writeText(msg.text);
+                              alert('Raw response copied to clipboard!');
+                            }}
+                          >
+                            Copy Raw Response
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {msg.sender === 'user' && (
+                      <div className="ml-2 sm:mr-3">{userAvatar}</div>
+                    )}
+                  </div>
+                ))}
+                {/* Loading indicator for AI response */}
+                {isLoading && (
+                  <div className="flex justify-start items-end w-full">
+                    <div className="mr-2 sm:mr-3">{aiAvatar}</div>
+                    <div className="relative max-w-[90vw] sm:max-w-xl px-4 sm:px-6 py-3 sm:py-4 rounded-3xl shadow-xl bg-gradient-to-br from-purple-200 to-pink-200 rounded-bl-2xl rounded-tl-3xl">
+                      <div className="flex items-center space-x-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                        <span className="text-gray-600 text-sm">AI Mentor is thinking...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+              
+              {/* Chat input */}
+              <div className="w-full flex justify-center z-40 fixed bottom-0 left-0 pointer-events-none">
+                <form onSubmit={handleSend} className="w-full max-w-3xl flex flex-row items-end gap-3 bg-white/95 rounded-2xl shadow-2xl px-4 py-3 mx-auto border border-gray-200 pointer-events-auto">
+                  {/* Attachment button (future) */}
+                  <button type="button" disabled className="p-2 rounded-full text-gray-400 hover:bg-gray-100 transition" title="Attach file (coming soon)">
+                    <Paperclip className="w-5 h-5" />
+                  </button>
+                  {/* Multiline input */}
+                  <textarea
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    placeholder={isLoading ? "AI Mentor is thinking..." : "Type your message..."}
+                    rows={1}
+                    maxLength={1000}
+                    disabled={isLoading}
+                    className="flex-1 resize-none bg-white rounded-xl px-5 py-4 text-lg sm:text-xl shadow-none border border-gray-200 focus:ring-2 focus:ring-blue-400 min-h-[48px] max-h-40 text-left transition placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ minHeight: '48px', maxHeight: '160px', overflowY: 'auto' }}
+                    onInput={e => {
+                      const target = e.target as HTMLTextAreaElement;
+                      target.style.height = '48px';
+                      target.style.height = Math.min(target.scrollHeight, 160) + 'px';
+                    }}
+                  />
+                  {/* Send button */}
+                  <button
+                    type="submit"
+                    className="p-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!input.trim() || isLoading}
+                    title="Send"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-6 h-6" />
+                    )}
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
       )}
+      
       {/* Back button for mentor request form */}
       {!showChat && (
         <button
