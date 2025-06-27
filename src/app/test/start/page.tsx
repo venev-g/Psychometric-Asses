@@ -14,9 +14,20 @@ export default async function StartTestPageServer() {
     redirect('/auth/login')
   }
 
-  // Fetch questions from the database
-  const questionsService = new QuestionsService(supabase)
-  const allQuestions = await questionsService.getAllQuestionsForAssessment()
+  // Fetch questions from the database with error handling
+  let allQuestions
+  try {
+    const questionsService = new QuestionsService(supabase)
+    allQuestions = await questionsService.getAllQuestionsForAssessment()
+  } catch (error) {
+    console.error('Error fetching questions:', error)
+    // Provide empty questions structure if there's an error
+    allQuestions = {
+      dominantIntelligence: [],
+      personalityPattern: [],
+      learningStyle: []
+    }
+  }
 
   return <StartTestPage user={user} questions={allQuestions} />
 }

@@ -117,15 +117,33 @@ export class ConfigurationService {
     return data
   }
 
-  async getAllConfigurations(): Promise<TestConfiguration[]> {
+  async getAllConfigurations(): Promise<any[]> {
     const { data, error } = await this.supabase
       .from('test_configurations')
-      .select('*')
+      .select(`
+        *,
+        test_sequences (
+          id,
+          sequence_order,
+          is_required,
+          test_types (*)
+        )
+      `)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
 
     if (error) throw error
-    return data
+    
+    // Sort test sequences by order for each configuration
+    if (data) {
+      data.forEach(config => {
+        if (config.test_sequences) {
+          config.test_sequences.sort((a: any, b: any) => a.sequence_order - b.sequence_order)
+        }
+      })
+    }
+
+    return data || []
   }
 
   async getTestTypes(): Promise<TestType[]> {

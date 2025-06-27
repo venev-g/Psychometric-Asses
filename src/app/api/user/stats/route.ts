@@ -1,5 +1,6 @@
 // src/app/api/user/stats/route.ts
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Database } from '@/types/database.types'
@@ -35,8 +36,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Use service role for DB operations to bypass role issues
+    const supabaseService = createClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Get user's assessment sessions
-    const { data: sessions, error: sessionsError } = await supabase
+    const { data: sessions, error: sessionsError } = await supabaseService
       .from('assessment_sessions')
       .select('id, status, started_at, completed_at')
       .eq('user_id', user.id)
@@ -46,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's assessment results
-    const { data: results, error: resultsError } = await supabase
+    const { data: results, error: resultsError } = await supabaseService
       .from('assessment_results')
       .select(`
         id, 

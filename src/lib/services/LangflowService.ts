@@ -16,7 +16,7 @@ export interface Session {
 }
 
 export class LangflowService {
-  private static readonly API_URL = process.env.NEXT_PUBLIC_LANGFLOW_API_URL || "http://127.0.0.1:7860/api/v1/run/cdc805c4-180f-4d10-a0e2-471fa7f8b042";
+  private static readonly API_URL = process.env.NEXT_PUBLIC_LANGFLOW_API_URL || "https://cc61-2409-40c0-105a-d42-c5fd-7286-d60e-8431.ngrok-free.app/api/v1/run/8fd4743e-77c0-4ce1-9332-2ddbeda3851b";
   private static readonly SESSIONS_KEY = 'langflow_sessions';
   
   // Get all sessions from localStorage

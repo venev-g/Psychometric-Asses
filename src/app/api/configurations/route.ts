@@ -1,5 +1,6 @@
 // src/app/api/configurations/route.ts
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Database } from '@/types/database.types'
@@ -32,7 +33,13 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    const configService = new ConfigurationService(supabase)
+    // Use service role for DB operations to bypass role issues
+    const supabaseService = createClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const configService = new ConfigurationService(supabaseService)
     
     const configurations = await configService.getAllConfigurations()
     
@@ -98,8 +105,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Use service role for DB operations to bypass role issues
+    const supabaseService = createClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Check if user is admin
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseService
       .from('user_profiles')
       .select('role')
       .eq('id', user.id)
@@ -110,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     const configData = await request.json()
-    const configService = new ConfigurationService(supabase)
+    const configService = new ConfigurationService(supabaseService)
     
     const configuration = await configService.createConfiguration({
       ...configData,

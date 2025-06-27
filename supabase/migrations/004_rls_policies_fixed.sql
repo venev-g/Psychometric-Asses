@@ -1,4 +1,4 @@
--- supabase/migrations/004_rls_policies.sql
+-- supabase/migrations/004_rls_policies_fixed.sql
 
 -- Enable RLS on all tables
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;

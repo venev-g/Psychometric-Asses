@@ -122,7 +122,7 @@ export function useAssessment(): AssessmentState & AssessmentActions {
     if (!state.session) return
 
     try {
-      const apiResponse = await fetch('/api/assessments/submit', {
+      const apiResponse = await fetch('/api/assessments/responses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -184,19 +184,16 @@ export function useAssessment(): AssessmentState & AssessmentActions {
     setState(prev => ({ ...prev, isLoading: true }))
 
     try {
-      const response = await fetch('/api/assessments/complete', {
+      const response = await fetch(`/api/assessments/session/${state.session.id}/complete-test`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: state.session.id
-        })
+        headers: { 'Content-Type': 'application/json' }
       })
 
       if (!response.ok) {
         throw new Error('Failed to complete assessment')
       }
 
-      const data = await response.json()
+      const _data = await response.json()
       
       setState(prev => ({
         ...prev,
@@ -205,7 +202,7 @@ export function useAssessment(): AssessmentState & AssessmentActions {
       }))
 
       // Redirect to results
-      window.location.href = `/assessments/results/${state.session.id}`
+      window.location.href = `/results/${state.session.id}`
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -289,7 +286,7 @@ export function useAssessmentResults(sessionId: string) {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const response = await fetch(`/api/assessments/results/${sessionId}`)
+        const response = await fetch(`/api/assessments/session/${sessionId}/results`)
         if (!response.ok) {
           throw new Error('Failed to fetch results')
         }
@@ -323,7 +320,7 @@ export function useAssessmentHistory() {
           throw new Error('Failed to fetch history')
         }
         const data = await response.json()
-        setHistory(data)
+        setHistory(data.sessions || [])
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error')
       } finally {
@@ -343,7 +340,7 @@ export function useAssessmentHistory() {
         throw new Error('Failed to fetch history')
       }
       const data = await response.json()
-      setHistory(data)
+      setHistory(data.sessions || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
