@@ -221,8 +221,167 @@ export class LangflowService {
       return responseText;
     } catch (error) {
       console.error("Error calling Langflow API:", error);
-      throw new Error(`Failed to get response from AI mentor: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Provide a fallback mock response when API is not available
+      console.warn("Langflow API not available, using fallback response");
+      return this.getFallbackResponse(message);
     }
+  }
+
+  // Fallback response when Langflow API is not available
+  private static getFallbackResponse(message: string): string {
+    const lowerMessage = message.toLowerCase();
+    
+    // Check if it's a mentor request
+    if (lowerMessage.includes('learning steps') || lowerMessage.includes('micro-modules') || lowerMessage.includes('curriculum')) {
+      return `🎓 **AI Mentor Response (Demo Mode)**
+
+I'll help you create a learning module for your topic! Here's a structured approach:
+
+## 📚 **4-Step Learning Framework**
+
+### 1. **Foundation Building** 
+- Start with core concepts and definitions
+- Create visual concept maps to connect ideas
+- Use analogies and real-world examples
+
+### 2. **Problem-Solving Practice**
+- Break down complex problems into smaller parts
+- Practice with guided examples
+- Build logical thinking skills step by step
+
+### 3. **Visual & Spatial Learning**
+- Use diagrams, charts, and spatial representations
+- Create mental models and visual frameworks
+- Connect abstract concepts to concrete visuals
+
+### 4. **Mastery & Application**
+- Challenge-based learning activities
+- Real-world application projects
+- Assessment and feedback loops
+
+## 🎯 **Implementation Tips**
+- Keep each step focused and achievable
+- Use multimedia resources (videos, interactive tools)
+- Provide immediate feedback and encouragement
+- Allow for different learning paces
+
+*Note: This is a demo response. Connect to Langflow API for personalized AI mentoring.*`;
+    }
+    
+    // Handle quick response buttons
+    if (lowerMessage.includes('i understand')) {
+      return `🎉 **Great! I'm glad you understand! (Demo Mode)**
+
+That's fantastic! Understanding is the first step to mastery. 
+
+## 🚀 **What's Next?**
+- **Practice**: Try applying what you learned to a real problem
+- **Teach**: Explain it to someone else to reinforce your knowledge
+- **Explore**: Dive deeper into related concepts
+- **Quiz**: Test your understanding with some practice questions
+
+Would you like to:
+- Take a quick quiz to test your knowledge?
+- Explore a related topic?
+- Get more examples or practice problems?
+
+*Note: This is a demo response. Connect to Langflow API for personalized follow-up.*`;
+    }
+    
+    if (lowerMessage.includes('i want to take quiz')) {
+      return `🧠 **Quiz Time! (Demo Mode)**
+
+Excellent choice! Let's test your understanding with some questions.
+
+## 📝 **Sample Quiz Questions:**
+
+### **Question 1:**
+What are the four main learning approaches we discussed?
+- A) Reading, Writing, Speaking, Listening
+- B) Visual maps, Problem-solving, Spatial learning, Mastery challenges
+- C) Theory, Practice, Test, Review
+- D) Watch, Learn, Do, Forget
+
+### **Question 2:**
+Which learning method involves breaking down complex problems?
+- A) Visual concept maps
+- B) Logical problem-solving
+- C) Spatial representations
+- D) Mastery-based challenges
+
+### **Question 3:**
+What should you do after understanding a concept?
+- A) Move to the next topic immediately
+- B) Practice and apply your knowledge
+- C) Forget about it
+- D) Only read about it
+
+**Answers:** 1-B, 2-B, 3-B
+
+## 🎯 **How did you do?**
+- **3/3**: Excellent! You've mastered the concepts
+- **2/3**: Good! Review the missed question
+- **1/3**: Let's review the concepts together
+
+*Note: This is a demo quiz. Connect to Langflow API for personalized assessments.*`;
+    }
+    
+    if (lowerMessage.includes('explain like a 5-year-old')) {
+      return `👶 **Super Simple Explanation! (Demo Mode)**
+
+Okay, let me explain this like you're 5 years old! 🌟
+
+## 🎈 **Learning is like building with blocks:**
+
+### **1. Foundation Blocks** 🧱
+- Start with the big, easy blocks at the bottom
+- These are the basic ideas you need to know first
+- Like learning your ABCs before reading books
+
+### **2. Problem-Solving Blocks** 🧩
+- When something is too hard, break it into smaller pieces
+- Like when you can't eat a whole cookie, you break it into bites
+- Take one small step at a time!
+
+### **3. Picture Blocks** 🎨
+- Draw pictures in your head to understand things
+- Like imagining a story while someone reads to you
+- Pictures help you remember better than just words
+
+### **4. Practice Blocks** 🎯
+- Keep trying until you get it right
+- Like learning to ride a bike - you fall, you get up, you try again
+- Practice makes perfect!
+
+## 🌈 **Remember:**
+- It's okay to not understand everything right away
+- Ask questions when you're confused
+- Take breaks when you're tired
+- Celebrate when you learn something new!
+
+*Note: This is a demo response. Connect to Langflow API for personalized simple explanations.*`;
+    }
+    
+    // General conversation fallback
+    return `🤖 **AI Mentor Response (Demo Mode)**
+
+Thank you for your message! I'm here to help with your learning journey.
+
+## 💡 **How I Can Help You:**
+- Break down complex topics into manageable steps
+- Create personalized learning paths
+- Provide visual and spatial learning strategies
+- Design mastery-based challenges
+- Offer problem-solving frameworks
+
+## 🚀 **Getting Started:**
+Try asking me to help you with:
+- "Create a learning module for [your topic]"
+- "Break down [concept] into simple steps"
+- "Design a visual learning approach for [subject]"
+
+*Note: This is a demo response. Connect to Langflow API for full AI mentoring capabilities.*`;
   }
 
   static async sendMentorRequest(formData: {
@@ -239,6 +398,63 @@ Curriculum Standards: ${formData.standards}
 
 Keep it concise and easy for a beginner.`;
 
-    return this.sendMessage(prompt, sessionId);
+    try {
+      return await this.sendMessage(prompt, sessionId);
+    } catch (error) {
+      // If the API call fails, provide a specific fallback response for mentor requests
+      console.warn("Langflow API not available for mentor request, using fallback response");
+      return this.getMentorRequestFallback(formData);
+    }
+  }
+
+  // Specific fallback for mentor requests
+  private static getMentorRequestFallback(formData: {
+    topic: string;
+    objectives: string;
+    prerequisites: string;
+    standards: string;
+  }): string {
+    return `🎓 **AI Mentor Response for "${formData.topic}" (Demo Mode)**
+
+I'll help you create a comprehensive learning module for **${formData.topic}**! Here's a structured approach tailored to your needs:
+
+## 📚 **4-Step Learning Framework**
+
+### 1. **Foundation Building** 
+- **Core Concepts**: Start with fundamental principles of ${formData.topic}
+- **Visual Mapping**: Create concept maps connecting key ideas
+- **Real-world Examples**: Use relatable analogies and applications
+
+### 2. **Problem-Solving Practice**
+- **Step-by-step Breakdown**: Decompose complex ${formData.topic} problems
+- **Guided Practice**: Work through examples with detailed explanations
+- **Logical Thinking**: Build systematic problem-solving approaches
+
+### 3. **Visual & Spatial Learning**
+- **Diagrams & Charts**: Visual representations of ${formData.topic} concepts
+- **Mental Models**: Create frameworks for understanding relationships
+- **Spatial Connections**: Link abstract concepts to concrete visualizations
+
+### 4. **Mastery & Application**
+- **Challenge Activities**: Hands-on projects related to ${formData.topic}
+- **Real-world Projects**: Apply knowledge to practical scenarios
+- **Assessment & Feedback**: Continuous evaluation and improvement
+
+## 🎯 **Learning Objectives Alignment**
+${formData.objectives ? `Based on your objectives: ${formData.objectives}` : 'Focus on building a strong foundation and practical skills.'}
+
+## 📋 **Prerequisites Consideration**
+${formData.prerequisites ? `Building on: ${formData.prerequisites}` : 'Starting from basic concepts and building up.'}
+
+## 📏 **Standards Integration**
+${formData.standards ? `Aligning with: ${formData.standards}` : 'Following best practices for effective learning.'}
+
+## 💡 **Implementation Tips**
+- **Pace Yourself**: Take time to master each step before moving forward
+- **Use Multiple Resources**: Combine videos, interactive tools, and practice exercises
+- **Seek Feedback**: Regular check-ins to ensure understanding
+- **Apply Knowledge**: Practice with real-world examples and scenarios
+
+*Note: This is a demo response. Connect to Langflow API for personalized AI mentoring with advanced capabilities.*`;
   }
 } 

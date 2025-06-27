@@ -10,7 +10,8 @@ import {
   History, 
   User, 
   Settings,
-  BookOpen
+  BookOpen,
+  FileText
 } from 'lucide-react'
 
 interface NavigationItem {
@@ -32,6 +33,12 @@ const navigationItems: NavigationItem[] = [
     href: '/test/start',
     icon: Play,
     description: 'Begin a new assessment'
+  },
+  {
+    name: 'Question Paper',
+    href: '/question-paper',
+    icon: FileText,
+    description: 'View question papers'
   },
   {
     name: 'Results',
