@@ -18,6 +18,8 @@ export interface Session {
 export class LangflowService {
   private static readonly API_URL = process.env.NEXT_PUBLIC_LANGFLOW_API_URL || "https://cc61-2409-40c0-105a-d42-c5fd-7286-d60e-8431.ngrok-free.app/api/v1/run/8fd4743e-77c0-4ce1-9332-2ddbeda3851b";
   private static readonly SESSIONS_KEY = 'langflow_sessions';
+  private static readonly MESSAGES_KEY = 'langflow_messages';
+  private static readonly QUIZ_STATE_KEY = 'langflow_quiz_state';
   
   // Get all sessions from localStorage
   static getSessions(): Session[] {
@@ -42,6 +44,59 @@ export class LangflowService {
       localStorage.setItem(this.SESSIONS_KEY, JSON.stringify(sessions));
     } catch (error) {
       console.error('Error saving sessions:', error);
+    }
+  }
+
+  // Get messages for a specific session
+  static getSessionMessages(sessionId: string): any[] {
+    if (typeof window === 'undefined') return [];
+    try {
+      const allMessages = localStorage.getItem(this.MESSAGES_KEY);
+      const messages = allMessages ? JSON.parse(allMessages) : {};
+      return messages[sessionId] || [];
+    } catch (error) {
+      console.error('Error loading session messages:', error);
+      return [];
+    }
+  }
+
+  // Save messages for a specific session
+  static saveSessionMessages(sessionId: string, messages: any[]): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const allMessages = localStorage.getItem(this.MESSAGES_KEY);
+      const messagesObj = allMessages ? JSON.parse(allMessages) : {};
+      messagesObj[sessionId] = messages;
+      localStorage.setItem(this.MESSAGES_KEY, JSON.stringify(messagesObj));
+    } catch (error) {
+      console.error('Error saving session messages:', error);
+    }
+  }
+
+  // Add a single message to a session
+  static addMessageToSession(sessionId: string, message: any): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const messages = this.getSessionMessages(sessionId);
+      messages.push(message);
+      this.saveSessionMessages(sessionId, messages);
+    } catch (error) {
+      console.error('Error adding message to session:', error);
+    }
+  }
+
+  // Delete messages for a session (when session is deleted)
+  static deleteSessionMessages(sessionId: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const allMessages = localStorage.getItem(this.MESSAGES_KEY);
+      if (allMessages) {
+        const messagesObj = JSON.parse(allMessages);
+        delete messagesObj[sessionId];
+        localStorage.setItem(this.MESSAGES_KEY, JSON.stringify(messagesObj));
+      }
+    } catch (error) {
+      console.error('Error deleting session messages:', error);
     }
   }
 
@@ -77,6 +132,8 @@ export class LangflowService {
     const sessions = this.getSessions();
     const filteredSessions = sessions.filter(s => s.id !== sessionId);
     this.saveSessions(filteredSessions);
+    this.deleteSessionMessages(sessionId);
+    this.deleteSessionQuizState(sessionId);
   }
 
   // Get session by ID
@@ -456,5 +513,46 @@ ${formData.standards ? `Aligning with: ${formData.standards}` : 'Following best 
 - **Apply Knowledge**: Practice with real-world examples and scenarios
 
 *Note: This is a demo response. Connect to Langflow API for personalized AI mentoring with advanced capabilities.*`;
+  }
+
+  // Get quiz state for a specific session
+  static getSessionQuizState(sessionId: string): { isQuizActive: boolean, quizQuestionCount: number } {
+    if (typeof window === 'undefined') return { isQuizActive: false, quizQuestionCount: 0 };
+    try {
+      const allQuizState = localStorage.getItem(this.QUIZ_STATE_KEY);
+      const quizState = allQuizState ? JSON.parse(allQuizState) : {};
+      return quizState[sessionId] || { isQuizActive: false, quizQuestionCount: 0 };
+    } catch (error) {
+      console.error('Error loading session quiz state:', error);
+      return { isQuizActive: false, quizQuestionCount: 0 };
+    }
+  }
+
+  // Save quiz state for a specific session
+  static saveSessionQuizState(sessionId: string, state: { isQuizActive: boolean, quizQuestionCount: number }): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const allQuizState = localStorage.getItem(this.QUIZ_STATE_KEY);
+      const quizStateObj = allQuizState ? JSON.parse(allQuizState) : {};
+      quizStateObj[sessionId] = state;
+      localStorage.setItem(this.QUIZ_STATE_KEY, JSON.stringify(quizStateObj));
+    } catch (error) {
+      console.error('Error saving session quiz state:', error);
+    }
+  }
+
+  // Delete quiz state for a session (when session is deleted)
+  static deleteSessionQuizState(sessionId: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const allQuizState = localStorage.getItem(this.QUIZ_STATE_KEY);
+      if (allQuizState) {
+        const quizStateObj = JSON.parse(allQuizState);
+        delete quizStateObj[sessionId];
+        localStorage.setItem(this.QUIZ_STATE_KEY, JSON.stringify(quizStateObj));
+      }
+    } catch (error) {
+      console.error('Error deleting session quiz state:', error);
+    }
   }
 } 

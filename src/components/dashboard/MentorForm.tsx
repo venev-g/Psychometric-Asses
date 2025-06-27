@@ -37,9 +37,32 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [selectedQuickResponse, setSelectedQuickResponse] = useState<string>("");
+
+  // Per-session quiz state
   const [isQuizActive, setIsQuizActive] = useState(false);
   const [quizQuestionCount, setQuizQuestionCount] = useState(0);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Load quiz state when session changes
+  useEffect(() => {
+    if (currentSession) {
+      const quizState = LangflowService.getSessionQuizState(currentSession.id);
+      setIsQuizActive(quizState.isQuizActive);
+      setQuizQuestionCount(quizState.quizQuestionCount);
+    } else {
+      // Reset quiz state when no session is selected
+      setIsQuizActive(false);
+      setQuizQuestionCount(0);
+    }
+  }, [currentSession?.id]); // Use session ID instead of entire session object
+
+  // Save quiz state when it changes
+  useEffect(() => {
+    if (currentSession) {
+      LangflowService.saveSessionQuizState(currentSession.id, { isQuizActive, quizQuestionCount });
+    }
+  }, [isQuizActive, quizQuestionCount, currentSession?.id]); // Use session ID instead of entire session object
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -56,7 +79,10 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
     setCurrentSession(session);
     setShowSessionManager(false);
     setShowChat(true);
-    setMessages([]); // Clear messages for new session
+    // Load existing messages for this session
+    const sessionMessages = LangflowService.getSessionMessages(session.id);
+    setMessages(sessionMessages);
+    // Quiz state will be loaded by useEffect
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,22 +104,28 @@ Curriculum Standards: ${form.standards}
 
 Keep it concise and easy for a beginner.`;
       
-      setMessages([
+      const initialMessages = [
         { sender: 'user', text: prompt }
-      ]);
+      ];
+      setMessages(initialMessages);
+      // Save initial messages to session
+      LangflowService.saveSessionMessages(newSession.id, initialMessages);
       setShowChat(true);
 
       // Send to Langflow API with the new session ID
-      const aiResponse = await LangflowService.sendMentorRequest(form, newSession.id);
+      const aiResponse = await LangflowService.sendMessage(prompt, newSession.id);
       
       // Check if this is a demo response
       const isDemoResponse = aiResponse.includes('(Demo Mode)');
       
-      setMessages(msgs => [...msgs, { 
+      const updatedMessages = [...initialMessages, { 
         sender: 'ai', 
         text: aiResponse,
         isDemo: isDemoResponse
-      }]);
+      }];
+      setMessages(updatedMessages);
+      // Save updated messages to session
+      LangflowService.saveSessionMessages(newSession.id, updatedMessages);
       
       // Show demo mode notification if applicable
       if (isDemoResponse) {
@@ -112,10 +144,16 @@ Keep it concise and easy for a beginner.`;
     if (!input.trim() || isLoading) return;
     
     const userMessage = input.trim();
-    setMessages([...messages, { sender: 'user', text: userMessage }]);
+    const updatedMessages = [...messages, { sender: 'user', text: userMessage }];
+    setMessages(updatedMessages);
     setInput('');
     setIsLoading(true);
     setError(null);
+
+    // Save user message to session
+    if (currentSession) {
+      LangflowService.saveSessionMessages(currentSession.id, updatedMessages);
+    }
 
     try {
       // Send to Langflow API with session ID
@@ -124,15 +162,25 @@ Keep it concise and easy for a beginner.`;
       console.log('AI Response length:', aiResponse.length);
       console.log('AI Response preview:', aiResponse.substring(0, 200) + '...');
       
-      setMessages(msgs => [...msgs, { sender: 'ai', text: aiResponse }]);
+      const finalMessages = [...updatedMessages, { sender: 'ai', text: aiResponse }];
+      setMessages(finalMessages);
+      // Save AI response to session
+      if (currentSession) {
+        LangflowService.saveSessionMessages(currentSession.id, finalMessages);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get AI response');
       console.error('Error in handleSend:', err);
       // Add error message to chat
-      setMessages(msgs => [...msgs, { 
+      const errorMessages = [...updatedMessages, { 
         sender: 'ai', 
         text: 'I apologize, but I encountered an error processing your message. Please try again.' 
-      }]);
+      }];
+      setMessages(errorMessages);
+      // Save error message to session
+      if (currentSession) {
+        LangflowService.saveSessionMessages(currentSession.id, errorMessages);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -148,51 +196,84 @@ Keep it concise and easy for a beginner.`;
       setIsQuizActive(false);
       setQuizQuestionCount(0);
     }
-    setMessages(msgs => [...msgs, { sender: 'user', text: response }]);
+    const updatedMessages = [...messages, { sender: 'user', text: response }];
+    setMessages(updatedMessages);
     setIsLoading(true);
     setError(null);
+
+    // Save user quick response to session
+    if (currentSession) {
+      LangflowService.saveSessionMessages(currentSession.id, updatedMessages);
+    }
 
     try {
       // Send to Langflow API with session ID
       const aiResponse = await LangflowService.sendMessage(response, currentSession?.id);
       const isDemoResponse = aiResponse.includes('(Demo Mode)');
-      setMessages(msgs => [...msgs, { 
+      const finalMessages = [...updatedMessages, { 
         sender: 'ai', 
         text: aiResponse,
         isDemo: isDemoResponse
-      }]);
+      }];
+      setMessages(finalMessages);
+      // Save AI response to session
+      if (currentSession) {
+        LangflowService.saveSessionMessages(currentSession.id, finalMessages);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get AI response');
-      setMessages(msgs => [...msgs, { 
+      const errorMessages = [...updatedMessages, { 
         sender: 'ai', 
         text: 'I apologize, but I encountered an error processing your response. Please try again.' 
-      }]);
+      }];
+      setMessages(errorMessages);
+      // Save error message to session
+      if (currentSession) {
+        LangflowService.saveSessionMessages(currentSession.id, errorMessages);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleQuizAnswer = async (answer: string) => {
-    setMessages(msgs => [...msgs, { sender: 'user', text: answer }]);
+    const updatedMessages = [...messages, { sender: 'user', text: answer }];
+    setMessages(updatedMessages);
     setIsLoading(true);
     setError(null);
+    
+    // Save quiz answer to session
+    if (currentSession) {
+      LangflowService.saveSessionMessages(currentSession.id, updatedMessages);
+    }
+    
     try {
       // Increment quiz question count
       setQuizQuestionCount(count => count + 1);
       // Send to Langflow API with session ID
       const aiResponse = await LangflowService.sendMessage(answer, currentSession?.id);
       const isDemoResponse = aiResponse.includes('(Demo Mode)');
-      setMessages(msgs => [...msgs, { 
+      const finalMessages = [...updatedMessages, { 
         sender: 'ai', 
         text: aiResponse,
         isDemo: isDemoResponse
-      }]);
+      }];
+      setMessages(finalMessages);
+      // Save AI response to session
+      if (currentSession) {
+        LangflowService.saveSessionMessages(currentSession.id, finalMessages);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get AI response');
-      setMessages(msgs => [...msgs, { 
+      const errorMessages = [...updatedMessages, { 
         sender: 'ai', 
         text: 'I apologize, but I encountered an error processing your answer. Please try again.' 
-      }]);
+      }];
+      setMessages(errorMessages);
+      // Save error message to session
+      if (currentSession) {
+        LangflowService.saveSessionMessages(currentSession.id, errorMessages);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -472,14 +553,61 @@ Keep it concise and easy for a beginner.`;
                   }
                   
                   // Regular conversation mode - show standard buttons after AI response
+                  // Convert to radio buttons
                   return (
                     <div className="flex justify-start items-end w-full">
                       <div className="mr-2 sm:mr-3">{aiAvatar}</div>
-                      <div className="flex flex-wrap gap-2 max-w-[90vw] sm:max-w-xl">
-                        <button onClick={() => handleQuickResponse("I understand")} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">✅ I understand</button>
-                        <button onClick={() => handleQuickResponse("I want to take quiz")} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">🧠 I want to take quiz</button>
-                        <button onClick={() => handleQuickResponse("I want you to explain like a 5-year-old")} className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">👶 I want you to explain like a 5-year-old</button>
-                      </div>
+                      <form
+                        className="flex flex-wrap gap-2 max-w-[90vw] sm:max-w-xl items-center mb-8 z-20 relative"
+                        style={{ paddingBottom: '1rem', justifyContent: 'flex-start' }}
+                        onSubmit={e => e.preventDefault()}
+                      >
+                        <label className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm font-medium transition-colors shadow-md cursor-pointer">
+                          <input
+                            type="radio"
+                            name="quick-response"
+                            value="I understand"
+                            checked={selectedQuickResponse === "I understand"}
+                            onChange={() => {
+                              setSelectedQuickResponse("I understand");
+                              handleQuickResponse("I understand");
+                              setSelectedQuickResponse("");
+                            }}
+                            className="accent-green-600"
+                          />
+                          <span>✅ I understand</span>
+                        </label>
+                        <label className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md cursor-pointer">
+                          <input
+                            type="radio"
+                            name="quick-response"
+                            value="I want to take quiz"
+                            checked={selectedQuickResponse === "I want to take quiz"}
+                            onChange={() => {
+                              setSelectedQuickResponse("I want to take quiz");
+                              handleQuickResponse("I want to take quiz");
+                              setSelectedQuickResponse("");
+                            }}
+                            className="accent-blue-600"
+                          />
+                          <span>🧠 I want to take quiz</span>
+                        </label>
+                        <label className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-full text-sm font-medium transition-colors shadow-md cursor-pointer">
+                          <input
+                            type="radio"
+                            name="quick-response"
+                            value="I want you to explain like a 5-year-old"
+                            checked={selectedQuickResponse === "I want you to explain like a 5-year-old"}
+                            onChange={() => {
+                              setSelectedQuickResponse("I want you to explain like a 5-year-old");
+                              handleQuickResponse("I want you to explain like a 5-year-old");
+                              setSelectedQuickResponse("");
+                            }}
+                            className="accent-purple-600"
+                          />
+                          <span>👶 I want you to explain like a 5-year-old</span>
+                        </label>
+                      </form>
                     </div>
                   );
                 })()}
