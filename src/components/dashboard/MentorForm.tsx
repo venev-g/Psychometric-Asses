@@ -44,16 +44,27 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
   const [isQuizActive, setIsQuizActive] = useState(false);
   const [quizQuestionCount, setQuizQuestionCount] = useState(0);
 
+  // New state for 5-year-old explanation flow
+  const [isFiveYearOldMode, setIsFiveYearOldMode] = useState(false);
+  const [fiveYearOldStep, setFiveYearOldStep] = useState<'initial' | 'after_explanation' | 'after_another_example'>('initial');
+
   // Load quiz state when session changes
   useEffect(() => {
     if (currentSession) {
       const quizState = LangflowService.getSessionQuizState(currentSession.id);
       setIsQuizActive(quizState.isQuizActive);
       setQuizQuestionCount(quizState.quizQuestionCount);
+      
+      // Load 5-year-old mode state
+      const fiveYearOldState = LangflowService.getSessionFiveYearOldState(currentSession.id);
+      setIsFiveYearOldMode(fiveYearOldState.isFiveYearOldMode);
+      setFiveYearOldStep(fiveYearOldState.fiveYearOldStep);
     } else {
       // Reset quiz state when no session is selected
       setIsQuizActive(false);
       setQuizQuestionCount(0);
+      setIsFiveYearOldMode(false);
+      setFiveYearOldStep('initial');
     }
   }, [currentSession?.id]); // Use session ID instead of entire session object
 
@@ -63,6 +74,13 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
       LangflowService.saveSessionQuizState(currentSession.id, { isQuizActive, quizQuestionCount });
     }
   }, [isQuizActive, quizQuestionCount, currentSession?.id]); // Use session ID instead of entire session object
+
+  // Save 5-year-old mode state when it changes
+  useEffect(() => {
+    if (currentSession) {
+      LangflowService.saveSessionFiveYearOldState(currentSession.id, { isFiveYearOldMode, fiveYearOldStep });
+    }
+  }, [isFiveYearOldMode, fiveYearOldStep, currentSession?.id]);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -191,11 +209,39 @@ Keep it concise and easy for a beginner.`;
     if (response === 'I want to take quiz' || response === 'Retake the quiz') {
       setIsQuizActive(true);
       setQuizQuestionCount(0); // Reset to 0 for new quiz
+      setIsFiveYearOldMode(false); // Exit 5-year-old mode
+      setFiveYearOldStep('initial');
     }
     if (response === 'I want to ask another question') {
       setIsQuizActive(false);
       setQuizQuestionCount(0);
+      setIsFiveYearOldMode(false); // Exit 5-year-old mode
+      setFiveYearOldStep('initial');
     }
+    
+    // 5-year-old mode logic
+    if (response === 'I want you to explain like a 5-year-old') {
+      setIsFiveYearOldMode(true);
+      setFiveYearOldStep('after_explanation');
+      setIsQuizActive(false); // Exit quiz mode
+      setQuizQuestionCount(0);
+    }
+    if (response === 'I understand' && isFiveYearOldMode) {
+      setIsFiveYearOldMode(false);
+      setFiveYearOldStep('initial');
+    }
+    if (response === 'explain with another example') {
+      setFiveYearOldStep('after_another_example');
+    }
+    if (response === 'yes' && fiveYearOldStep === 'after_another_example') {
+      setIsFiveYearOldMode(false);
+      setFiveYearOldStep('initial');
+    }
+    if (response === 'no' && fiveYearOldStep === 'after_another_example') {
+      setIsFiveYearOldMode(false);
+      setFiveYearOldStep('initial');
+    }
+    
     const updatedMessages = [...messages, { sender: 'user', text: response }];
     setMessages(updatedMessages);
     setIsLoading(true);
@@ -546,6 +592,33 @@ Keep it concise and easy for a beginner.`;
                           <div className="flex flex-wrap gap-2 max-w-[90vw] sm:max-w-xl">
                             <button onClick={() => handleQuickResponse('I want to ask another question')} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">I want to ask another question</button>
                             <button onClick={() => handleQuickResponse('Retake the quiz')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">Retake the quiz</button>
+                          </div>
+                        </div>
+                      );
+                    }
+                  }
+                  
+                  // 5-year-old mode: Show different buttons based on step
+                  if (isFiveYearOldMode) {
+                    if (fiveYearOldStep === 'after_explanation') {
+                      return (
+                        <div className="flex justify-start items-end w-full">
+                          <div className="mr-2 sm:mr-3">{aiAvatar}</div>
+                          <div className="flex flex-wrap gap-2 max-w-[90vw] sm:max-w-xl">
+                            <button onClick={() => handleQuickResponse('I understand')} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">✅ I understand</button>
+                            <button onClick={() => handleQuickResponse('explain with another example')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">🔄 Explain with another example</button>
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    if (fiveYearOldStep === 'after_another_example') {
+                      return (
+                        <div className="flex justify-start items-end w-full">
+                          <div className="mr-2 sm:mr-3">{aiAvatar}</div>
+                          <div className="flex flex-wrap gap-2 max-w-[90vw] sm:max-w-xl">
+                            <button onClick={() => handleQuickResponse('yes')} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">✅ Yes</button>
+                            <button onClick={() => handleQuickResponse('no')} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">❌ No</button>
                           </div>
                         </div>
                       );

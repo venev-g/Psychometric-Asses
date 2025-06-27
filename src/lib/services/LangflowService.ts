@@ -20,6 +20,7 @@ export class LangflowService {
   private static readonly SESSIONS_KEY = 'langflow_sessions';
   private static readonly MESSAGES_KEY = 'langflow_messages';
   private static readonly QUIZ_STATE_KEY = 'langflow_quiz_state';
+  private static readonly FIVE_YEAR_OLD_STATE_KEY = 'langflow_five_year_old_state';
   
   // Get all sessions from localStorage
   static getSessions(): Session[] {
@@ -134,6 +135,7 @@ export class LangflowService {
     this.saveSessions(filteredSessions);
     this.deleteSessionMessages(sessionId);
     this.deleteSessionQuizState(sessionId);
+    this.deleteSessionFiveYearOldState(sessionId);
   }
 
   // Get session by ID
@@ -553,6 +555,47 @@ ${formData.standards ? `Aligning with: ${formData.standards}` : 'Following best 
       }
     } catch (error) {
       console.error('Error deleting session quiz state:', error);
+    }
+  }
+
+  // Get five-year-old state for a specific session
+  static getSessionFiveYearOldState(sessionId: string): { isFiveYearOldMode: boolean, fiveYearOldStep: 'initial' | 'after_explanation' | 'after_another_example' } {
+    if (typeof window === 'undefined') return { isFiveYearOldMode: false, fiveYearOldStep: 'initial' };
+    try {
+      const allFiveYearOldState = localStorage.getItem(this.FIVE_YEAR_OLD_STATE_KEY);
+      const fiveYearOldState = allFiveYearOldState ? JSON.parse(allFiveYearOldState) : {};
+      return fiveYearOldState[sessionId] || { isFiveYearOldMode: false, fiveYearOldStep: 'initial' };
+    } catch (error) {
+      console.error('Error loading session five-year-old state:', error);
+      return { isFiveYearOldMode: false, fiveYearOldStep: 'initial' };
+    }
+  }
+
+  // Save five-year-old state for a specific session
+  static saveSessionFiveYearOldState(sessionId: string, state: { isFiveYearOldMode: boolean, fiveYearOldStep: 'initial' | 'after_explanation' | 'after_another_example' }): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const allFiveYearOldState = localStorage.getItem(this.FIVE_YEAR_OLD_STATE_KEY);
+      const fiveYearOldStateObj = allFiveYearOldState ? JSON.parse(allFiveYearOldState) : {};
+      fiveYearOldStateObj[sessionId] = state;
+      localStorage.setItem(this.FIVE_YEAR_OLD_STATE_KEY, JSON.stringify(fiveYearOldStateObj));
+    } catch (error) {
+      console.error('Error saving session five-year-old state:', error);
+    }
+  }
+
+  // Delete five-year-old state for a session (when session is deleted)
+  static deleteSessionFiveYearOldState(sessionId: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const allFiveYearOldState = localStorage.getItem(this.FIVE_YEAR_OLD_STATE_KEY);
+      if (allFiveYearOldState) {
+        const fiveYearOldStateObj = JSON.parse(allFiveYearOldState);
+        delete fiveYearOldStateObj[sessionId];
+        localStorage.setItem(this.FIVE_YEAR_OLD_STATE_KEY, JSON.stringify(fiveYearOldStateObj));
+      }
+    } catch (error) {
+      console.error('Error deleting session five-year-old state:', error);
     }
   }
 } 
