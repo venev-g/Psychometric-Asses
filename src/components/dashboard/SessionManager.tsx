@@ -27,14 +27,65 @@ export function SessionManager({ onSessionSelect, currentSessionId }: SessionMan
   };
 
   const handleCreateSession = () => {
-    if (!newSessionTopic.trim()) return;
+    console.log('handleCreateSession called');
+    if (!newSessionTopic.trim()) {
+      console.log('No topic entered, aborting');
+      return;
+    }
     
+    console.log('Creating session with topic:', newSessionTopic, 'and name:', newSessionName);
     const newSession = LangflowService.createSession(newSessionTopic, newSessionName || undefined);
+    console.log('New session created:', newSession);
     setSessions([newSession, ...sessions]);
     setNewSessionName('');
     setNewSessionTopic('');
     setIsCreateDialogOpen(false);
+    console.log('Dialog closed, calling onSessionSelect');
+    
+    // Create initial prompt for the new session
+    const initialPrompt = `Explain ${newSessionTopic} with step by step explanation and examples.`;
+    
+    // Add initial messages to the session
+    const initialMessages = [
+      { sender: 'user', text: initialPrompt }
+    ];
+    LangflowService.saveSessionMessages(newSession.id, initialMessages);
+    
+    // Call onSessionSelect with the new session and initial messages
     onSessionSelect(newSession);
+    
+    // Automatically send the initial prompt to get AI response
+    setTimeout(async () => {
+      try {
+        console.log('Sending initial prompt to AI:', initialPrompt);
+        const aiResponse = await LangflowService.sendMessage(initialPrompt, newSession.id);
+        console.log('Received AI response:', aiResponse);
+        
+        // Add AI response to messages
+        const updatedMessages = [...initialMessages, { 
+          sender: 'ai', 
+          text: aiResponse,
+          isDemo: aiResponse.includes('(Demo Mode)')
+        }];
+        LangflowService.saveSessionMessages(newSession.id, updatedMessages);
+        
+        // Update the session in the list to reflect the new message count
+        const updatedSession = { ...newSession, messageCount: 2, lastMessageAt: new Date() };
+        LangflowService.updateSession(newSession.id, { messageCount: 2, lastMessageAt: new Date() });
+        
+        // Reload sessions to show updated message count
+        loadSessions();
+        
+      } catch (error) {
+        console.error('Error sending initial prompt:', error);
+        // Add error message to chat
+        const errorMessages = [...initialMessages, { 
+          sender: 'ai', 
+          text: 'I apologize, but I encountered an error processing your request. Please try again.' 
+        }];
+        LangflowService.saveSessionMessages(newSession.id, errorMessages);
+      }
+    }, 100); // Small delay to ensure the chat view is ready
   };
 
   const handleDeleteSession = (sessionId: string) => {

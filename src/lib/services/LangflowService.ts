@@ -40,9 +40,14 @@ export class LangflowService {
 
   // Save sessions to localStorage
   private static saveSessions(sessions: Session[]): void {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {
+      console.log('Window is undefined, skipping localStorage save');
+      return;
+    }
     try {
+      console.log('Saving sessions to localStorage:', sessions);
       localStorage.setItem(this.SESSIONS_KEY, JSON.stringify(sessions));
+      console.log('Sessions successfully saved to localStorage');
     } catch (error) {
       console.error('Error saving sessions:', error);
     }
@@ -103,7 +108,11 @@ export class LangflowService {
 
   // Create a new session
   static createSession(topic: string, name?: string): Session {
+    console.log('LangflowService.createSession called with topic:', topic, 'name:', name);
+    
     const sessions = this.getSessions();
+    console.log('Current sessions:', sessions);
+    
     const newSession: Session = {
       id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: name || `Session ${sessions.length + 1}`,
@@ -113,8 +122,14 @@ export class LangflowService {
       messageCount: 0
     };
     
+    console.log('Created new session object:', newSession);
+    
     sessions.unshift(newSession); // Add to beginning
+    console.log('Updated sessions array:', sessions);
+    
     this.saveSessions(sessions);
+    console.log('Sessions saved to localStorage');
+    
     return newSession;
   }
 

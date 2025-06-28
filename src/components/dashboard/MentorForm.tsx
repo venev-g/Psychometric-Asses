@@ -89,6 +89,28 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
     }
   }, [messages, showChat]);
 
+  // Refresh messages when current session changes
+  useEffect(() => {
+    if (currentSession) {
+      const sessionMessages = LangflowService.getSessionMessages(currentSession.id);
+      setMessages(sessionMessages);
+    }
+  }, [currentSession?.id]);
+
+  // Poll for message updates when in chat view
+  useEffect(() => {
+    if (!showChat || !currentSession) return;
+    
+    const interval = setInterval(() => {
+      const sessionMessages = LangflowService.getSessionMessages(currentSession.id);
+      if (sessionMessages.length !== messages.length) {
+        setMessages(sessionMessages);
+      }
+    }, 1000); // Check every second
+    
+    return () => clearInterval(interval);
+  }, [showChat, currentSession?.id, messages.length]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -105,12 +127,25 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log('Form submitted with data:', form);
+    
+    // Add validation to ensure topic is filled
+    if (!form.topic.trim()) {
+      console.log('Topic is empty, showing error');
+      setError('Please enter a target topic');
+      return;
+    }
+    
+    console.log('Starting form submission process...');
     setIsLoading(true);
     setError(null);
     
     try {
       // Always create a new session for mentor requests
+      console.log('Creating new session for topic:', form.topic);
       const newSession = LangflowService.createSession(form.topic);
+      console.log('New session created:', newSession);
       setCurrentSession(newSession);
       
       // Build the prompt for the mentor bot
@@ -122,6 +157,8 @@ Curriculum Standards: ${form.standards}
 
 Keep it concise and easy for a beginner.`;
       
+      console.log('Built prompt:', prompt);
+      
       const initialMessages = [
         { sender: 'user', text: prompt }
       ];
@@ -129,9 +166,12 @@ Keep it concise and easy for a beginner.`;
       // Save initial messages to session
       LangflowService.saveSessionMessages(newSession.id, initialMessages);
       setShowChat(true);
+      console.log('Switched to chat view');
 
       // Send to Langflow API with the new session ID
+      console.log('Sending message to Langflow API...');
       const aiResponse = await LangflowService.sendMessage(prompt, newSession.id);
+      console.log('Received AI response:', aiResponse);
       
       // Check if this is a demo response
       const isDemoResponse = aiResponse.includes('(Demo Mode)');
@@ -150,10 +190,11 @@ Keep it concise and easy for a beginner.`;
         console.log('Demo mode active - Langflow API not available');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to get AI response');
       console.error('Error in handleSubmit:', err);
+      setError(err instanceof Error ? err.message : 'Failed to get AI response');
     } finally {
       setIsLoading(false);
+      console.log('Form submission completed');
     }
   };
 
@@ -420,7 +461,14 @@ Keep it concise and easy for a beginner.`;
                     Target Topic
                     <Tooltip text="The main topic or concept you want to learn about." />
                   </label>
-                  <Input name="topic" value={form.topic} onChange={handleChange} placeholder="e.g. Quantum Entanglement" className="bg-white/80" />
+                  <Input 
+                    name="topic" 
+                    value={form.topic} 
+                    onChange={handleChange} 
+                    placeholder="e.g. Quantum Entanglement" 
+                    className="bg-white/80"
+                    required
+                  />
                 </div>
                 {/* Learning Objectives */}
                 <div>
@@ -449,7 +497,7 @@ Keep it concise and easy for a beginner.`;
                 <div className="pt-2 flex justify-end">
                   <Button 
                     type="submit" 
-                    disabled={isLoading}
+                    disabled={isLoading || !form.topic.trim()}
                     className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded shadow disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (
