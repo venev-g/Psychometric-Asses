@@ -48,6 +48,15 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
   const [isFiveYearOldMode, setIsFiveYearOldMode] = useState(false);
   const [fiveYearOldStep, setFiveYearOldStep] = useState<'initial' | 'after_explanation' | 'after_another_example'>('initial');
 
+  // Add new state for first reply and different approach
+  const [firstReplyAwaitingYesNo, setFirstReplyAwaitingYesNo] = useState(false);
+  const [useDifferentApproachMode, setUseDifferentApproachMode] = useState(false);
+
+  // Add auto quiz detection state
+  const [autoQuizActive, setAutoQuizActive] = useState(false);
+  const [autoQuizCount, setAutoQuizCount] = useState(0);
+  const [pendingAutoQuiz, setPendingAutoQuiz] = useState(false);
+
   // Load quiz state when session changes
   useEffect(() => {
     if (currentSession) {
@@ -166,6 +175,8 @@ Keep it concise and easy for a beginner.`;
       // Save initial messages to session
       LangflowService.saveSessionMessages(newSession.id, initialMessages);
       setShowChat(true);
+      setFirstReplyAwaitingYesNo(true); // Await Yes/No after first reply
+      setUseDifferentApproachMode(false); // Reset different approach mode
       console.log('Switched to chat view');
 
       // Send to Langflow API with the new session ID
@@ -201,7 +212,6 @@ Keep it concise and easy for a beginner.`;
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    
     const userMessage = input.trim();
     const updatedMessages = [...messages, { sender: 'user', text: userMessage }];
     setMessages(updatedMessages);
@@ -214,18 +224,45 @@ Keep it concise and easy for a beginner.`;
       LangflowService.saveSessionMessages(currentSession.id, updatedMessages);
     }
 
+    // If user is in 'use different approach' mode and types 'I want to ask another question' (or similar), reset the flow
+    if (useDifferentApproachMode && /i want to ask( another)? question/i.test(userMessage)) {
+      setFirstReplyAwaitingYesNo(true);
+      setUseDifferentApproachMode(false);
+    }
+
+    // Auto-detect quiz intent
+    if (/take\s*quiz/i.test(userMessage)) {
+      setPendingAutoQuiz(true);
+    }
+
     try {
       // Send to Langflow API with session ID
       const aiResponse = await LangflowService.sendMessage(userMessage, currentSession?.id);
       console.log('AI Response received:', aiResponse);
       console.log('AI Response length:', aiResponse.length);
       console.log('AI Response preview:', aiResponse.substring(0, 200) + '...');
-      
-      const finalMessages = [...updatedMessages, { sender: 'ai', text: aiResponse }];
-      setMessages(finalMessages);
-      // Save AI response to session
-      if (currentSession) {
-        LangflowService.saveSessionMessages(currentSession.id, finalMessages);
+      // Ignore JSON object responses
+      let isJson = false;
+      let parsed;
+      try {
+        parsed = JSON.parse(aiResponse);
+        isJson = typeof parsed === 'object' && parsed !== null;
+      } catch (e) {
+        isJson = false;
+      }
+      if (!isJson) {
+        // If pendingAutoQuiz, activate quiz mode now
+        if (pendingAutoQuiz) {
+          setAutoQuizActive(true);
+          setAutoQuizCount(0);
+          setPendingAutoQuiz(false);
+        }
+        const finalMessages = [...updatedMessages, { sender: 'ai', text: aiResponse }];
+        setMessages(finalMessages);
+        // Save AI response to session
+        if (currentSession) {
+          LangflowService.saveSessionMessages(currentSession.id, finalMessages);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get AI response');
@@ -246,6 +283,25 @@ Keep it concise and easy for a beginner.`;
   };
 
   const handleQuickResponse = async (response: string) => {
+    // Handle Yes/No after first reply
+    if (firstReplyAwaitingYesNo && (response === 'Yes' || response === 'No')) {
+      setFirstReplyAwaitingYesNo(false); // Now show the four options after explanation
+    }
+    // Handle 'Use a different approach'
+    if (response === 'Use a different approach') {
+      setUseDifferentApproachMode(true);
+      setFirstReplyAwaitingYesNo(false);
+      setIsQuizActive(false);
+      setQuizQuestionCount(0);
+      setIsFiveYearOldMode(false);
+      setFiveYearOldStep('initial');
+    }
+    // If user asks another question in different approach mode, reset flow
+    if (useDifferentApproachMode && response === 'I want to ask another question') {
+      setUseDifferentApproachMode(false);
+      setFirstReplyAwaitingYesNo(true);
+    }
+    
     // Quiz start/retake logic
     if (response === 'I want to take quiz' || response === 'Retake the quiz') {
       setIsQuizActive(true);
@@ -297,15 +353,26 @@ Keep it concise and easy for a beginner.`;
       // Send to Langflow API with session ID
       const aiResponse = await LangflowService.sendMessage(response, currentSession?.id);
       const isDemoResponse = aiResponse.includes('(Demo Mode)');
-      const finalMessages = [...updatedMessages, { 
-        sender: 'ai', 
-        text: aiResponse,
-        isDemo: isDemoResponse
-      }];
-      setMessages(finalMessages);
-      // Save AI response to session
-      if (currentSession) {
-        LangflowService.saveSessionMessages(currentSession.id, finalMessages);
+      // Ignore JSON object responses
+      let isJson = false;
+      let parsed;
+      try {
+        parsed = JSON.parse(aiResponse);
+        isJson = typeof parsed === 'object' && parsed !== null;
+      } catch (e) {
+        isJson = false;
+      }
+      if (!isJson) {
+        const finalMessages = [...updatedMessages, { 
+          sender: 'ai', 
+          text: aiResponse,
+          isDemo: isDemoResponse
+        }];
+        setMessages(finalMessages);
+        // Save AI response to session
+        if (currentSession) {
+          LangflowService.saveSessionMessages(currentSession.id, finalMessages);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get AI response');
@@ -333,22 +400,44 @@ Keep it concise and easy for a beginner.`;
     if (currentSession) {
       LangflowService.saveSessionMessages(currentSession.id, updatedMessages);
     }
-    
+
+    // If auto quiz is active, increment count
+    if (autoQuizActive) {
+      setAutoQuizCount(count => {
+        if (count + 1 >= 5) {
+          setAutoQuizActive(false);
+          return 0;
+        }
+        return count + 1;
+      });
+    }
+
     try {
       // Increment quiz question count
       setQuizQuestionCount(count => count + 1);
       // Send to Langflow API with session ID
       const aiResponse = await LangflowService.sendMessage(answer, currentSession?.id);
       const isDemoResponse = aiResponse.includes('(Demo Mode)');
-      const finalMessages = [...updatedMessages, { 
-        sender: 'ai', 
-        text: aiResponse,
-        isDemo: isDemoResponse
-      }];
-      setMessages(finalMessages);
-      // Save AI response to session
-      if (currentSession) {
-        LangflowService.saveSessionMessages(currentSession.id, finalMessages);
+      // Ignore JSON object responses
+      let isJson = false;
+      let parsed;
+      try {
+        parsed = JSON.parse(aiResponse);
+        isJson = typeof parsed === 'object' && parsed !== null;
+      } catch (e) {
+        isJson = false;
+      }
+      if (!isJson) {
+        const finalMessages = [...updatedMessages, { 
+          sender: 'ai', 
+          text: aiResponse,
+          isDemo: isDemoResponse
+        }];
+        setMessages(finalMessages);
+        // Save AI response to session
+        if (currentSession) {
+          LangflowService.saveSessionMessages(currentSession.id, finalMessages);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get AI response');
@@ -385,6 +474,19 @@ Keep it concise and easy for a beginner.`;
     // Completion message will be provided by the backend
     return '';
   };
+
+  // Helper to detect if a message is a quiz question (contains at least four lines starting with (A), (B), (C), (D), case-insensitive, allow optional spaces)
+  function isQuizQuestionMessage(text: string) {
+    const lines = text.split(/\n|<br\s*\/?>(?=\s*\(?[A-Da-d][\)\.\-:])/);
+    let found = { A: false, B: false, C: false, D: false };
+    for (const line of lines) {
+      if (/^\s*\(?[Aa][\)\.\-:]/.test(line)) found.A = true;
+      if (/^\s*\(?[Bb][\)\.\-:]/.test(line)) found.B = true;
+      if (/^\s*\(?[Cc][\)\.\-:]/.test(line)) found.C = true;
+      if (/^\s*\(?[Dd][\)\.\-:]/.test(line)) found.D = true;
+    }
+    return found.A && found.B && found.C && found.D;
+  }
 
   return (
     <div className="relative w-full h-screen flex items-center justify-center overflow-hidden">
@@ -609,13 +711,29 @@ Keep it concise and easy for a beginner.`;
                 {/* Quick Response Buttons - Show after AI response */}
                 {(() => {
                   if (messages.length === 0 || isLoading) return null;
-                  
-                  // Check if the last message is from AI
                   const lastMessage = messages[messages.length - 1];
                   if (lastMessage.sender !== 'ai') return null;
-                  
-                  // Quiz mode: Show A/B/C/D for first 5 questions (count 0-4)
-                  if (isQuizActive && quizQuestionCount < 5) {
+
+                  // 1. Yes/No after first reply
+                  if (firstReplyAwaitingYesNo) {
+                    return (
+                      <div className="flex justify-start items-end w-full">
+                        <div className="mr-2 sm:mr-3">{aiAvatar}</div>
+                        <div className="flex flex-wrap gap-2 max-w-[90vw] sm:max-w-xl">
+                          <button onClick={() => handleQuickResponse('Yes')} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">Yes</button>
+                          <button onClick={() => handleQuickResponse('No')} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">No</button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // 2. If in 'use different approach' mode, do not show any buttons, only allow typing
+                  if (useDifferentApproachMode) {
+                    return null;
+                  }
+
+                  // Quiz mode: Show A/B/C/D if autoQuizActive and last AI message is a quiz question
+                  if (autoQuizActive && isQuizQuestionMessage(lastMessage.text)) {
                     return (
                       <div className="flex justify-start items-end w-full">
                         <div className="mr-2 sm:mr-3">{aiAvatar}</div>
@@ -628,7 +746,7 @@ Keep it concise and easy for a beginner.`;
                       </div>
                     );
                   }
-                  
+
                   // Quiz mode: Show retake/ask another question after 5 questions (count 5), but only if the user actually took the quiz
                   if (isQuizActive && quizQuestionCount >= 5) {
                     // Check if the last 5 user messages were quiz answers (A/B/C/D)
@@ -673,8 +791,20 @@ Keep it concise and easy for a beginner.`;
                     }
                   }
                   
-                  // Regular conversation mode - show standard buttons after AI response
-                  // Convert to radio buttons
+                  // After 5 quiz answers in autoQuizActive mode, show only 'I want to ask another question' and 'Retake the quiz' buttons
+                  if (autoQuizActive && autoQuizCount >= 5) {
+                    return (
+                      <div className="flex justify-start items-end w-full">
+                        <div className="mr-2 sm:mr-3">{aiAvatar}</div>
+                        <div className="flex flex-wrap gap-2 max-w-[90vw] sm:max-w-xl">
+                          <button onClick={() => handleQuickResponse('I want to ask another question')} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">I want to ask another question</button>
+                          <button onClick={() => handleQuickResponse('Retake the quiz')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">Retake the quiz</button>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // 3. After explanation, show four options
                   return (
                     <div className="flex justify-start items-end w-full">
                       <div className="mr-2 sm:mr-3">{aiAvatar}</div>
@@ -727,6 +857,21 @@ Keep it concise and easy for a beginner.`;
                             className="accent-purple-600"
                           />
                           <span>👶 I want you to explain like a 5-year-old</span>
+                        </label>
+                        <label className="flex items-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-full text-sm font-medium transition-colors shadow-md cursor-pointer">
+                          <input
+                            type="radio"
+                            name="quick-response"
+                            value="Use a different approach"
+                            checked={selectedQuickResponse === "Use a different approach"}
+                            onChange={() => {
+                              setSelectedQuickResponse("Use a different approach");
+                              handleQuickResponse("Use a different approach");
+                              setSelectedQuickResponse("");
+                            }}
+                            className="accent-pink-600"
+                          />
+                          <span>🔄 Use a different approach</span>
                         </label>
                       </form>
                     </div>

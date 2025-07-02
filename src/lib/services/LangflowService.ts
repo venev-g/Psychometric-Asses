@@ -16,7 +16,7 @@ export interface Session {
 }
 
 export class LangflowService {
-  private static readonly API_URL = process.env.NEXT_PUBLIC_LANGFLOW_API_URL || "https://cc61-2409-40c0-105a-d42-c5fd-7286-d60e-8431.ngrok-free.app/api/v1/run/8fd4743e-77c0-4ce1-9332-2ddbeda3851b";
+  private static readonly API_URL = process.env.NEXT_PUBLIC_LANGFLOW_API_URL || "http://127.0.0.1:7860/api/v1/run/4177053d-460a-4d98-b9e8-c6b4d0222f75";
   private static readonly SESSIONS_KEY = 'langflow_sessions';
   private static readonly MESSAGES_KEY = 'langflow_messages';
   private static readonly QUIZ_STATE_KEY = 'langflow_quiz_state';
