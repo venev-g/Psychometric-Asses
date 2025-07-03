@@ -829,23 +829,12 @@ Keep it concise and easy for a beginner.`;
                     return null;
                   }
 
-                  // Quiz mode: Show A/B/C/D if in quiz mode and last Super Teacher message is a quiz question
-                  if (isQuizMode && isQuizQuestionMessage(lastMessage.text)) {
-                    return (
-                      <div className="flex justify-start items-end w-full">
-                        <div className="mr-2 sm:mr-3">{aiAvatar}</div>
-                        <div className="flex flex-wrap gap-2 max-w-[90vw] sm:max-w-xl">
-                          <button onClick={() => handleQuizAnswer('A')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">A</button>
-                          <button onClick={() => handleQuizAnswer('B')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">B</button>
-                          <button onClick={() => handleQuizAnswer('C')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">C</button>
-                          <button onClick={() => handleQuizAnswer('D')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">D</button>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // Auto quiz mode: Show A/B/C/D if autoQuizActive and last Super Teacher message is a quiz question
-                  if (autoQuizActive && isQuizQuestionMessage(lastMessage.text)) {
+                  // Show A/B/C/D buttons if the last AI message is a quiz question and not in special modes
+                  if (
+                    isQuizQuestionMessage(lastMessage.text) &&
+                    !useDifferentApproachMode &&
+                    !isFiveYearOldMode
+                  ) {
                     return (
                       <div className="flex justify-start items-end w-full">
                         <div className="mr-2 sm:mr-3">{aiAvatar}</div>
