@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
-import { Info, Paperclip, Send, Loader2, Plus } from 'lucide-react';
+import { Info, Paperclip, Send, Loader2, Plus, MessageSquare, MessageSquareOff } from 'lucide-react';
 import { LangflowService, Session } from '@/lib/services/LangflowService';
 import { SessionManager } from './SessionManager';
 
@@ -20,7 +20,7 @@ const userAvatar = (
   <img src="/images/user-avatar.png" alt="User" className="w-10 h-10 rounded-full border-2 border-blue-400 shadow-md bg-white object-cover" />
 );
 const aiAvatar = (
-  <img src="/images/mentor2.png" alt="AI Mentor" className="w-10 h-10 rounded-full border-2 border-purple-400 shadow-md bg-white object-cover" />
+  <img src="/images/mentor2.png" alt="Super Teacher" className="w-10 h-10 rounded-full border-2 border-purple-400 shadow-md bg-white object-cover" />
 );
 
 export function MentorForm({ onClose }: { onClose?: () => void }) {
@@ -57,6 +57,21 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
   const [autoQuizCount, setAutoQuizCount] = useState(0);
   const [pendingAutoQuiz, setPendingAutoQuiz] = useState(false);
 
+  // Add state to control when text input should be enabled
+  const [isTextInputEnabled, setIsTextInputEnabled] = useState(false);
+
+  // Add state to track quiz mode and responses
+  const [isQuizMode, setIsQuizMode] = useState(false);
+  const [quizResponseCount, setQuizResponseCount] = useState(0);
+
+  // Add state for manual text input toggle
+  const [isManualTextInputEnabled, setIsManualTextInputEnabled] = useState(false);
+
+  // Function to handle manual text input toggle
+  const handleManualTextInputToggle = () => {
+    setIsManualTextInputEnabled(!isManualTextInputEnabled);
+  };
+
   // Load quiz state when session changes
   useEffect(() => {
     if (currentSession) {
@@ -68,12 +83,19 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
       const fiveYearOldState = LangflowService.getSessionFiveYearOldState(currentSession.id);
       setIsFiveYearOldMode(fiveYearOldState.isFiveYearOldMode);
       setFiveYearOldStep(fiveYearOldState.fiveYearOldStep);
+      
+      // Load quiz mode state
+      const quizModeState = LangflowService.getSessionQuizModeState(currentSession.id);
+      setIsQuizMode(quizModeState.isQuizMode);
+      setQuizResponseCount(quizModeState.quizResponseCount);
     } else {
       // Reset quiz state when no session is selected
       setIsQuizActive(false);
       setQuizQuestionCount(0);
       setIsFiveYearOldMode(false);
       setFiveYearOldStep('initial');
+      setIsQuizMode(false);
+      setQuizResponseCount(0);
     }
   }, [currentSession?.id]); // Use session ID instead of entire session object
 
@@ -90,6 +112,13 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
       LangflowService.saveSessionFiveYearOldState(currentSession.id, { isFiveYearOldMode, fiveYearOldStep });
     }
   }, [isFiveYearOldMode, fiveYearOldStep, currentSession?.id]);
+
+  // Save quiz mode state when it changes
+  useEffect(() => {
+    if (currentSession) {
+      LangflowService.saveSessionQuizModeState(currentSession.id, { isQuizMode, quizResponseCount });
+    }
+  }, [isQuizMode, quizResponseCount, currentSession?.id]);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -132,6 +161,24 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
     const sessionMessages = LangflowService.getSessionMessages(session.id);
     setMessages(sessionMessages);
     // Quiz state will be loaded by useEffect
+    
+    // Reset manual mode when switching sessions
+    setIsManualTextInputEnabled(false);
+    
+    // Determine if text input should be enabled based on current state
+    const lastMessage = sessionMessages[sessionMessages.length - 1];
+    if (lastMessage && lastMessage.sender === 'ai') {
+      // Check if we're in a state where text input should be enabled
+      const shouldEnableInput = !firstReplyAwaitingYesNo && 
+                               !isQuizActive && 
+                               !isFiveYearOldMode && 
+                               !useDifferentApproachMode &&
+                               !autoQuizActive &&
+                               !isQuizMode;
+      setIsTextInputEnabled(shouldEnableInput);
+    } else {
+      setIsTextInputEnabled(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,7 +204,7 @@ export function MentorForm({ onClose }: { onClose?: () => void }) {
       console.log('New session created:', newSession);
       setCurrentSession(newSession);
       
-      // Build the prompt for the mentor bot
+      // Build the prompt for the Super Teacher bot
       const prompt = `Suggest 4 simple learning steps for "${form.topic}".
 
 Learning Objectives: ${form.objectives}
@@ -177,12 +224,13 @@ Keep it concise and easy for a beginner.`;
       setShowChat(true);
       setFirstReplyAwaitingYesNo(true); // Await Yes/No after first reply
       setUseDifferentApproachMode(false); // Reset different approach mode
+      setIsTextInputEnabled(false); // Disable text input initially
       console.log('Switched to chat view');
 
       // Send to Langflow API with the new session ID
       console.log('Sending message to Langflow API...');
       const aiResponse = await LangflowService.sendMessage(prompt, newSession.id);
-      console.log('Received AI response:', aiResponse);
+      console.log('Received Super Teacher response:', aiResponse);
       
       // Check if this is a demo response
       const isDemoResponse = aiResponse.includes('(Demo Mode)');
@@ -202,7 +250,7 @@ Keep it concise and easy for a beginner.`;
       }
     } catch (err) {
       console.error('Error in handleSubmit:', err);
-      setError(err instanceof Error ? err.message : 'Failed to get AI response');
+      setError(err instanceof Error ? err.message : 'Failed to get Super Teacher response');
     } finally {
       setIsLoading(false);
       console.log('Form submission completed');
@@ -233,14 +281,17 @@ Keep it concise and easy for a beginner.`;
     // Auto-detect quiz intent
     if (/take\s*quiz/i.test(userMessage)) {
       setPendingAutoQuiz(true);
+      setIsQuizMode(true);
+      setQuizResponseCount(0);
+      setIsTextInputEnabled(false);
     }
 
     try {
       // Send to Langflow API with session ID
       const aiResponse = await LangflowService.sendMessage(userMessage, currentSession?.id);
-      console.log('AI Response received:', aiResponse);
-      console.log('AI Response length:', aiResponse.length);
-      console.log('AI Response preview:', aiResponse.substring(0, 200) + '...');
+      console.log('Super Teacher Response received:', aiResponse);
+      console.log('Super Teacher Response length:', aiResponse.length);
+      console.log('Super Teacher Response preview:', aiResponse.substring(0, 200) + '...');
       // Ignore JSON object responses
       let isJson = false;
       let parsed;
@@ -257,15 +308,27 @@ Keep it concise and easy for a beginner.`;
           setAutoQuizCount(0);
           setPendingAutoQuiz(false);
         }
+        
+        // If in quiz mode, increment response count
+        if (isQuizMode) {
+          setQuizResponseCount(count => count + 1);
+          
+          // Check if quiz mode should end after 5 responses
+          if (quizResponseCount + 1 >= 5) {
+            setIsQuizMode(false);
+            setIsTextInputEnabled(false); // Keep disabled to show final buttons
+          }
+        }
+        
         const finalMessages = [...updatedMessages, { sender: 'ai', text: aiResponse }];
         setMessages(finalMessages);
-        // Save AI response to session
+        // Save Super Teacher response to session
         if (currentSession) {
           LangflowService.saveSessionMessages(currentSession.id, finalMessages);
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to get AI response');
+      setError(err instanceof Error ? err.message : 'Failed to get Super Teacher response');
       console.error('Error in handleSend:', err);
       // Add error message to chat
       const errorMessages = [...updatedMessages, { 
@@ -295,11 +358,13 @@ Keep it concise and easy for a beginner.`;
       setQuizQuestionCount(0);
       setIsFiveYearOldMode(false);
       setFiveYearOldStep('initial');
+      setIsTextInputEnabled(true); // Enable text input for different approach mode
     }
     // If user asks another question in different approach mode, reset flow
     if (useDifferentApproachMode && response === 'I want to ask another question') {
       setUseDifferentApproachMode(false);
       setFirstReplyAwaitingYesNo(true);
+      setIsTextInputEnabled(false); // Disable text input when going back to Yes/No
     }
     
     // Quiz start/retake logic
@@ -308,12 +373,18 @@ Keep it concise and easy for a beginner.`;
       setQuizQuestionCount(0); // Reset to 0 for new quiz
       setIsFiveYearOldMode(false); // Exit 5-year-old mode
       setFiveYearOldStep('initial');
+      setIsTextInputEnabled(false); // Disable text input during quiz
+      setIsQuizMode(true); // Enable quiz mode
+      setQuizResponseCount(0); // Reset quiz response count
     }
     if (response === 'I want to ask another question') {
       setIsQuizActive(false);
       setQuizQuestionCount(0);
       setIsFiveYearOldMode(false); // Exit 5-year-old mode
       setFiveYearOldStep('initial');
+      setIsTextInputEnabled(false); // Disable text input when asking another question
+      setIsQuizMode(false); // Disable quiz mode
+      setQuizResponseCount(0); // Reset quiz response count
     }
     
     // 5-year-old mode logic
@@ -322,21 +393,30 @@ Keep it concise and easy for a beginner.`;
       setFiveYearOldStep('after_explanation');
       setIsQuizActive(false); // Exit quiz mode
       setQuizQuestionCount(0);
+      setIsTextInputEnabled(false); // Disable text input during 5-year-old mode
     }
     if (response === 'I understand' && isFiveYearOldMode) {
       setIsFiveYearOldMode(false);
       setFiveYearOldStep('initial');
+      setIsTextInputEnabled(true); // Enable text input after understanding
+    }
+    // Handle "I understand" from main options (not in 5-year-old mode)
+    if (response === 'I understand' && !isFiveYearOldMode) {
+      setIsTextInputEnabled(true); // Enable text input after understanding
     }
     if (response === 'explain with another example') {
       setFiveYearOldStep('after_another_example');
+      setIsTextInputEnabled(false); // Keep disabled during example explanation
     }
     if (response === 'yes' && fiveYearOldStep === 'after_another_example') {
       setIsFiveYearOldMode(false);
       setFiveYearOldStep('initial');
+      setIsTextInputEnabled(true); // Enable text input after understanding
     }
     if (response === 'no' && fiveYearOldStep === 'after_another_example') {
       setIsFiveYearOldMode(false);
       setFiveYearOldStep('initial');
+      setIsTextInputEnabled(true); // Enable text input after understanding
     }
     
     const updatedMessages = [...messages, { sender: 'user', text: response }];
@@ -369,13 +449,13 @@ Keep it concise and easy for a beginner.`;
           isDemo: isDemoResponse
         }];
         setMessages(finalMessages);
-        // Save AI response to session
+        // Save Super Teacher response to session
         if (currentSession) {
           LangflowService.saveSessionMessages(currentSession.id, finalMessages);
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to get AI response');
+      setError(err instanceof Error ? err.message : 'Failed to get Super Teacher response');
       const errorMessages = [...updatedMessages, { 
         sender: 'ai', 
         text: 'I apologize, but I encountered an error processing your response. Please try again.' 
@@ -406,6 +486,7 @@ Keep it concise and easy for a beginner.`;
       setAutoQuizCount(count => {
         if (count + 1 >= 5) {
           setAutoQuizActive(false);
+          setIsTextInputEnabled(true); // Enable text input after auto quiz completion
           return 0;
         }
         return count + 1;
@@ -415,6 +496,8 @@ Keep it concise and easy for a beginner.`;
     try {
       // Increment quiz question count
       setQuizQuestionCount(count => count + 1);
+      // Increment quiz response count for quiz mode
+      setQuizResponseCount(count => count + 1);
       // Send to Langflow API with session ID
       const aiResponse = await LangflowService.sendMessage(answer, currentSession?.id);
       const isDemoResponse = aiResponse.includes('(Demo Mode)');
@@ -434,13 +517,24 @@ Keep it concise and easy for a beginner.`;
           isDemo: isDemoResponse
         }];
         setMessages(finalMessages);
-        // Save AI response to session
+        // Save Super Teacher response to session
         if (currentSession) {
           LangflowService.saveSessionMessages(currentSession.id, finalMessages);
         }
+        
+        // Enable text input after quiz completion (5 questions)
+        if (quizQuestionCount + 1 >= 5) {
+          setIsTextInputEnabled(true);
+        }
+        
+        // Check if quiz mode should end after 5 responses
+        if (isQuizMode && quizResponseCount + 1 >= 5) {
+          setIsQuizMode(false);
+          setIsTextInputEnabled(false); // Keep disabled to show final buttons
+        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to get AI response');
+      setError(err instanceof Error ? err.message : 'Failed to get Super Teacher response');
       const errorMessages = [...updatedMessages, { 
         sender: 'ai', 
         text: 'I apologize, but I encountered an error processing your answer. Please try again.' 
@@ -475,17 +569,14 @@ Keep it concise and easy for a beginner.`;
     return '';
   };
 
-  // Helper to detect if a message is a quiz question (contains at least four lines starting with (A), (B), (C), (D), case-insensitive, allow optional spaces)
+  // Helper to detect if a message is a quiz question (contains (A), (B), (C), (D))
   function isQuizQuestionMessage(text: string) {
-    const lines = text.split(/\n|<br\s*\/?>(?=\s*\(?[A-Da-d][\)\.\-:])/);
-    let found = { A: false, B: false, C: false, D: false };
-    for (const line of lines) {
-      if (/^\s*\(?[Aa][\)\.\-:]/.test(line)) found.A = true;
-      if (/^\s*\(?[Bb][\)\.\-:]/.test(line)) found.B = true;
-      if (/^\s*\(?[Cc][\)\.\-:]/.test(line)) found.C = true;
-      if (/^\s*\(?[Dd][\)\.\-:]/.test(line)) found.D = true;
-    }
-    return found.A && found.B && found.C && found.D;
+    return (
+      /\(A\)/.test(text) &&
+      /\(B\)/.test(text) &&
+      /\(C\)/.test(text) &&
+      /\(D\)/.test(text)
+    );
   }
 
   return (
@@ -551,10 +642,10 @@ Keep it concise and easy for a beginner.`;
             {/* Mentor Form only, no session sidebar */}
             <form onSubmit={handleSubmit} className="w-full max-w-xl mx-auto shadow-2xl border-0 bg-gradient-to-br from-blue-50 to-purple-100 relative z-10 p-4 sm:p-8">
               <CardHeader>
-                <CardTitle className="text-2xl font-bold text-blue-900 flex items-center gap-2">
-                  Mentor Request
-                </CardTitle>
-                <p className="text-gray-600 mt-1">Fill out the details for your learning module. Your AI mentor will help you craft the perfect lesson!</p>
+                              <CardTitle className="text-2xl font-bold text-blue-900 flex items-center gap-2">
+                Super Teacher Request
+              </CardTitle>
+              <p className="text-gray-600 mt-1">Fill out the details for your learning module. Your Super Teacher will help you craft the perfect lesson!</p>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Target Topic */}
@@ -605,10 +696,10 @@ Keep it concise and easy for a beginner.`;
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Sending to Mentor...
+                        Sending to Super Teacher...
                       </>
                     ) : (
-                      'Send to Mentor'
+                      'Send to Super Teacher'
                     )}
                   </Button>
                 </div>
@@ -638,14 +729,20 @@ Keep it concise and easy for a beginner.`;
                 {/* Hamburger icon */}
                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><rect y="4" width="24" height="2" rx="1" fill="currentColor"/><rect y="11" width="24" height="2" rx="1" fill="currentColor"/><rect y="18" width="24" height="2" rx="1" fill="currentColor"/></svg>
               </button>
-              <img src="/images/mentor2.png" alt="AI Mentor" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-purple-400 shadow-md bg-white object-cover" />
-              <span className="text-white text-lg sm:text-2xl font-bold tracking-wide drop-shadow">AI Mentor</span>
+              <img src="/images/mentor2.png" alt="Super Teacher" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-purple-400 shadow-md bg-white object-cover" />
+              <span className="text-white text-lg sm:text-2xl font-bold tracking-wide drop-shadow">Super Teacher</span>
               {currentSession && (
                 <span className="text-white/80 text-sm">• {currentSession.name}</span>
               )}
             </div>
             <div className="flex items-center gap-2">
               <span className="text-white/70 text-xs sm:text-sm font-medium">Advanced Learning Assistant</span>
+              {isManualTextInputEnabled && (
+                <span className="text-white/90 text-xs sm:text-sm font-medium bg-green-500/20 px-2 py-1 rounded-full flex items-center gap-1">
+                  <MessageSquare className="w-3 h-3" />
+                  Manual Mode
+                </span>
+              )}
               <button
                 type="button"
                 className="ml-4 px-3 py-1 rounded bg-white/20 hover:bg-white/40 text-white font-semibold text-sm transition"
@@ -708,7 +805,7 @@ Keep it concise and easy for a beginner.`;
                   </div>
                 ))}
                 
-                {/* Quick Response Buttons - Show after AI response */}
+                {/* Quick Response Buttons - Show after Super Teacher response */}
                 {(() => {
                   if (messages.length === 0 || isLoading) return null;
                   const lastMessage = messages[messages.length - 1];
@@ -732,7 +829,22 @@ Keep it concise and easy for a beginner.`;
                     return null;
                   }
 
-                  // Quiz mode: Show A/B/C/D if autoQuizActive and last AI message is a quiz question
+                  // Quiz mode: Show A/B/C/D if in quiz mode and last Super Teacher message is a quiz question
+                  if (isQuizMode && isQuizQuestionMessage(lastMessage.text)) {
+                    return (
+                      <div className="flex justify-start items-end w-full">
+                        <div className="mr-2 sm:mr-3">{aiAvatar}</div>
+                        <div className="flex flex-wrap gap-2 max-w-[90vw] sm:max-w-xl">
+                          <button onClick={() => handleQuizAnswer('A')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">A</button>
+                          <button onClick={() => handleQuizAnswer('B')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">B</button>
+                          <button onClick={() => handleQuizAnswer('C')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">C</button>
+                          <button onClick={() => handleQuizAnswer('D')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">D</button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Auto quiz mode: Show A/B/C/D if autoQuizActive and last Super Teacher message is a quiz question
                   if (autoQuizActive && isQuizQuestionMessage(lastMessage.text)) {
                     return (
                       <div className="flex justify-start items-end w-full">
@@ -742,6 +854,19 @@ Keep it concise and easy for a beginner.`;
                           <button onClick={() => handleQuizAnswer('B')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">B</button>
                           <button onClick={() => handleQuizAnswer('C')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">C</button>
                           <button onClick={() => handleQuizAnswer('D')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">D</button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Quiz mode: Show retake/ask another question after 5 responses in quiz mode
+                  if (!isQuizMode && quizResponseCount >= 5 && isQuizQuestionMessage(lastMessage.text)) {
+                    return (
+                      <div className="flex justify-start items-end w-full">
+                        <div className="mr-2 sm:mr-3">{aiAvatar}</div>
+                        <div className="flex flex-wrap gap-2 max-w-[90vw] sm:max-w-xl">
+                          <button onClick={() => handleQuickResponse('I want to ask another question')} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">I want to ask another question</button>
+                          <button onClick={() => handleQuickResponse('Retake the quiz')} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm font-medium transition-colors shadow-md">Retake the quiz</button>
                         </div>
                       </div>
                     );
@@ -877,14 +1002,14 @@ Keep it concise and easy for a beginner.`;
                     </div>
                   );
                 })()}
-                {/* Loading indicator for AI response */}
+                {/* Loading indicator for Super Teacher response */}
                 {isLoading && (
                   <div className="flex justify-start items-end w-full">
                     <div className="mr-2 sm:mr-3">{aiAvatar}</div>
                     <div className="relative max-w-[90vw] sm:max-w-xl px-4 sm:px-6 py-3 sm:py-4 rounded-3xl shadow-xl bg-gradient-to-br from-purple-200 to-pink-200 rounded-bl-2xl rounded-tl-3xl">
                       <div className="flex items-center space-x-2">
                         <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
-                        <span className="text-gray-600 text-sm">AI Mentor is thinking...</span>
+                        <span className="text-gray-600 text-sm">Super Teacher is thinking...</span>
                       </div>
                     </div>
                   </div>
@@ -892,9 +1017,30 @@ Keep it concise and easy for a beginner.`;
                 <div ref={chatEndRef} />
               </div>
               
-              {/* Chat input */}
+                                {/* Chat input */}
               <div className="w-full flex justify-center z-40 fixed bottom-0 left-0 pointer-events-none">
                 <form onSubmit={handleSend} className="w-full max-w-3xl flex flex-row items-end gap-3 bg-white/95 rounded-2xl shadow-2xl px-4 py-3 mx-auto border border-gray-200 pointer-events-auto">
+                  {/* Manual text input toggle button */}
+                  <button 
+                    type="button" 
+                    onClick={handleManualTextInputToggle}
+                    className={`p-2 rounded-full transition-all duration-200 relative group ${
+                      isManualTextInputEnabled 
+                        ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg' 
+                        : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
+                    }`}
+                    title={isManualTextInputEnabled ? 'Disable manual text input' : 'Enable manual text input (bypass button restrictions)'}
+                  >
+                    {isManualTextInputEnabled ? (
+                      <MessageSquareOff className="w-5 h-5" />
+                    ) : (
+                      <MessageSquare className="w-5 h-5" />
+                    )}
+                    {/* Tooltip */}
+                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                      {isManualTextInputEnabled ? 'Disable manual mode' : 'Enable manual mode'}
+                    </span>
+                  </button>
                   {/* Attachment button (future) */}
                   <button type="button" disabled className="p-2 rounded-full text-gray-400 hover:bg-gray-100 transition" title="Attach file (coming soon)">
                     <Paperclip className="w-5 h-5" />
@@ -903,10 +1049,18 @@ Keep it concise and easy for a beginner.`;
                   <textarea
                     value={input}
                     onChange={e => setInput(e.target.value)}
-                    placeholder={isLoading ? "AI Mentor is thinking..." : "Type your message..."}
+                    placeholder={
+                      isLoading 
+                        ? "Super Teacher is thinking..." 
+                        : !isTextInputEnabled && !isManualTextInputEnabled
+                          ? "Use the buttons above to continue..." 
+                          : isManualTextInputEnabled
+                            ? "Manual mode: Type your message..."
+                            : "Type your message..."
+                    }
                     rows={1}
                     maxLength={1000}
-                    disabled={isLoading}
+                    disabled={isLoading || (!isTextInputEnabled && !isManualTextInputEnabled)}
                     className="flex-1 resize-none bg-white rounded-xl px-5 py-4 text-lg sm:text-xl shadow-none border border-gray-200 focus:ring-2 focus:ring-blue-400 min-h-[48px] max-h-40 text-left transition placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ minHeight: '48px', maxHeight: '160px', overflowY: 'auto' }}
                     onInput={e => {
@@ -919,7 +1073,7 @@ Keep it concise and easy for a beginner.`;
                   <button
                     type="submit"
                     className="p-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!input.trim() || isLoading}
+                    disabled={!input.trim() || isLoading || (!isTextInputEnabled && !isManualTextInputEnabled)}
                     title="Send"
                   >
                     {isLoading ? (

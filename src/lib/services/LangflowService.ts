@@ -21,6 +21,7 @@ export class LangflowService {
   private static readonly MESSAGES_KEY = 'langflow_messages';
   private static readonly QUIZ_STATE_KEY = 'langflow_quiz_state';
   private static readonly FIVE_YEAR_OLD_STATE_KEY = 'langflow_five_year_old_state';
+  private static readonly QUIZ_MODE_STATE_KEY = 'langflow_quiz_mode_state';
   
   // Get all sessions from localStorage
   static getSessions(): Session[] {
@@ -151,6 +152,7 @@ export class LangflowService {
     this.deleteSessionMessages(sessionId);
     this.deleteSessionQuizState(sessionId);
     this.deleteSessionFiveYearOldState(sessionId);
+    this.deleteSessionQuizModeState(sessionId);
   }
 
   // Get session by ID
@@ -611,6 +613,47 @@ ${formData.standards ? `Aligning with: ${formData.standards}` : 'Following best 
       }
     } catch (error) {
       console.error('Error deleting session five-year-old state:', error);
+    }
+  }
+
+  // Get quiz mode state for a specific session
+  static getSessionQuizModeState(sessionId: string): { isQuizMode: boolean, quizResponseCount: number } {
+    if (typeof window === 'undefined') return { isQuizMode: false, quizResponseCount: 0 };
+    try {
+      const allQuizModeState = localStorage.getItem(this.QUIZ_MODE_STATE_KEY);
+      const quizModeState = allQuizModeState ? JSON.parse(allQuizModeState) : {};
+      return quizModeState[sessionId] || { isQuizMode: false, quizResponseCount: 0 };
+    } catch (error) {
+      console.error('Error loading session quiz mode state:', error);
+      return { isQuizMode: false, quizResponseCount: 0 };
+    }
+  }
+
+  // Save quiz mode state for a specific session
+  static saveSessionQuizModeState(sessionId: string, state: { isQuizMode: boolean, quizResponseCount: number }): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const allQuizModeState = localStorage.getItem(this.QUIZ_MODE_STATE_KEY);
+      const quizModeStateObj = allQuizModeState ? JSON.parse(allQuizModeState) : {};
+      quizModeStateObj[sessionId] = state;
+      localStorage.setItem(this.QUIZ_MODE_STATE_KEY, JSON.stringify(quizModeStateObj));
+    } catch (error) {
+      console.error('Error saving session quiz mode state:', error);
+    }
+  }
+
+  // Delete quiz mode state for a session (when session is deleted)
+  static deleteSessionQuizModeState(sessionId: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const allQuizModeState = localStorage.getItem(this.QUIZ_MODE_STATE_KEY);
+      if (allQuizModeState) {
+        const quizModeStateObj = JSON.parse(allQuizModeState);
+        delete quizModeStateObj[sessionId];
+        localStorage.setItem(this.QUIZ_MODE_STATE_KEY, JSON.stringify(quizModeStateObj));
+      }
+    } catch (error) {
+      console.error('Error deleting session quiz mode state:', error);
     }
   }
 } 
